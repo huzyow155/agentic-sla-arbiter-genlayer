@@ -1,31 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ShieldCheck,
-  Activity,
-  Cpu,
   ExternalLink,
   Copy,
   Check,
-  AlertTriangle,
-  XCircle,
-  CheckCircle2,
   RefreshCw,
   Plus,
   Search,
   Server,
   Zap,
-  BarChart3,
-  Lock,
-  Globe,
   Terminal,
   X,
-  Code,
-  TrendingUp,
-  Info,
-  ChevronRight,
   Wallet,
-  LogOut
+  LogOut,
+  AlertCircle,
+  Database
 } from 'lucide-react';
+import { createClient } from 'genlayer-js';
+import { studionet } from 'genlayer-js/chains';
 
 declare global {
   interface Window {
@@ -62,1308 +53,994 @@ interface EvaluationRecord {
   score: number;
   evaluator: string;
   summary: string;
-  timestamp: string;
+  timestamp?: string;
 }
 
 interface ToastNotification {
   id: string;
-  type: 'success' | 'warning' | 'error' | 'info';
+  type: 'info' | 'success' | 'error' | 'warning';
   title: string;
   message: string;
+  txHash?: string;
 }
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0xB0Ba9C3dC6a9460667E8e29d38A9e5fbaF7D807C';
-const RPC_URL = import.meta.env.VITE_RPC_URL || 'https://studio.genlayer.com/api';
-const NETWORK_NAME = import.meta.env.VITE_CHAIN_ID || 'studionet';
+const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || '0xB0Ba9C3dC6a9460667E8e29d38A9e5fbaF7D807C') as `0x${string}`;
+const STUDIONET_CHAIN_ID_HEX = '0xf22f'; // 61999
 const EXPLORER_URL = `https://studio.genlayer.com/address/${CONTRACT_ADDRESS}`;
 
-const INITIAL_SERVICES: ServiceSLA[] = [
-  {
-    service_id: 'coingecko-feed-v3',
-    name: 'CoinGecko Spot Oracle Gateway',
-    provider: '0x71cb29a49b6f8490e5183ef9b736480b91d2a49b',
-    endpoint_url: 'https://api.coingecko.com/api/v3/ping',
-    sla_criteria: 'HTTP 200 with valid status JSON and latency under 450ms. Must include server heartbeat.',
-    total_evaluations: 24,
-    compliant_count: 23,
-    degraded_count: 1,
-    violated_count: 0,
-    consecutive_violations: 0,
-    penalty_threshold: 3,
-    last_verdict: 'COMPLIANT',
-    last_score: 98,
-    is_active: true,
-  },
-  {
-    service_id: 'solana-rpc-cluster',
-    name: 'Solana High-Throughput RPC Endpoint',
-    provider: '0x99283748293740238491823902349023490232ec',
-    endpoint_url: 'https://api.mainnet-beta.solana.com',
-    sla_criteria: 'Responds to getHealth JSON-RPC call within 500ms with "ok" status. Zero socket drops.',
-    total_evaluations: 38,
-    compliant_count: 35,
-    degraded_count: 2,
-    violated_count: 1,
-    consecutive_violations: 0,
-    penalty_threshold: 3,
-    last_verdict: 'COMPLIANT',
-    last_score: 92,
-    is_active: true,
-  },
-  {
-    service_id: 'ethereum-sepolia-gateway',
-    name: 'Ethereum Sepolia Public Gateway',
-    provider: '0x3429384029482039482039482039482039489901',
-    endpoint_url: 'https://rpc.sepolia.org',
-    sla_criteria: 'Block sync state valid with latency under 800ms and response to eth_blockNumber.',
-    total_evaluations: 17,
-    compliant_count: 11,
-    degraded_count: 4,
-    violated_count: 2,
-    consecutive_violations: 2,
-    penalty_threshold: 3,
-    last_verdict: 'DEGRADED',
-    last_score: 68,
-    is_active: true,
-  },
-  {
-    service_id: 'arweave-gateway-decentralized',
-    name: 'Arweave Permanent Storage Gateway',
-    provider: '0x551928472938472938472938472938472938bb89',
-    endpoint_url: 'https://arweave.net/info',
-    sla_criteria: 'Valid network info JSON with network block height advancing and peers >= 10.',
-    total_evaluations: 42,
-    compliant_count: 41,
-    degraded_count: 1,
-    violated_count: 0,
-    consecutive_violations: 0,
-    penalty_threshold: 4,
-    last_verdict: 'COMPLIANT',
-    last_score: 99,
-    is_active: true,
-  },
-  {
-    service_id: 'legacy-bridge-relayer',
-    name: 'Cross-Chain Teleport Bridge Relayer',
-    provider: '0x12a938472938472938472938472938472938ff01',
-    endpoint_url: 'https://teleport.legacy-relay.net/health',
-    sla_criteria: 'Must respond with proof validity and uptime guarantee >= 99.9%.',
-    total_evaluations: 12,
-    compliant_count: 4,
-    degraded_count: 4,
-    violated_count: 4,
-    consecutive_violations: 3,
-    penalty_threshold: 3,
-    last_verdict: 'VIOLATED',
-    last_score: 18,
-    is_active: false,
-  },
-];
-
-const INITIAL_EVALUATIONS: EvaluationRecord[] = [
-  {
-    evaluation_id: 104,
-    service_id: 'coingecko-feed-v3',
-    verdict: 'COMPLIANT',
-    score: 98,
-    evaluator: '0xb0ba9c3dc6a9460667e8e29d38a9e5fbaf7d807c',
-    summary: 'Endpoint returned HTTP 200 with server ping response: "(V3) To the Moon!". Latency within target window.',
-    timestamp: '2026-09-20 14:48:12 UTC',
-  },
-  {
-    evaluation_id: 103,
-    service_id: 'ethereum-sepolia-gateway',
-    verdict: 'DEGRADED',
-    score: 68,
-    evaluator: '0xb0ba9c3dc6a9460667e8e29d38a9e5fbaf7d807c',
-    summary: 'Response time elevated to 1420ms exceeding primary SLA threshold of 800ms. Partial response valid.',
-    timestamp: '2026-09-20 14:15:02 UTC',
-  },
-  {
-    evaluation_id: 102,
-    service_id: 'solana-rpc-cluster',
-    verdict: 'COMPLIANT',
-    score: 92,
-    evaluator: '0xb0ba9c3dc6a9460667e8e29d38a9e5fbaf7d807c',
-    summary: 'Validator cluster status returned "ok". Slot synchronization verified within tolerance.',
-    timestamp: '2026-09-20 13:52:45 UTC',
-  },
-  {
-    evaluation_id: 101,
-    service_id: 'legacy-bridge-relayer',
-    verdict: 'VIOLATED',
-    score: 18,
-    evaluator: '0xb0ba9c3dc6a9460667e8e29d38a9e5fbaf7d807c',
-    summary: 'Connection timeout after 5000ms. HTTP 504 Gateway Timeout observed. SLA penalty threshold reached.',
-    timestamp: '2026-09-20 12:30:10 UTC',
-  },
-];
+// Read-only client instantiated against studionet
+const readClient = createClient({
+  chain: studionet,
+});
 
 export default function App() {
-  const [services, setServices] = useState<ServiceSLA[]>(() => {
-    const saved = localStorage.getItem('agentic_sla_services');
-    return saved ? JSON.parse(saved) : INITIAL_SERVICES;
-  });
-
-  const [evaluations, setEvaluations] = useState<EvaluationRecord[]>(() => {
-    const saved = localStorage.getItem('agentic_sla_evaluations');
-    return saved ? JSON.parse(saved) : INITIAL_EVALUATIONS;
-  });
-
-  const [toasts, setToasts] = useState<ToastNotification[]>([]);
-  const [copiedAddress, setCopiedAddress] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PENALIZED' | 'COMPLIANT' | 'VIOLATED'>('ALL');
-
-  // Web3 Wallet Authentication State
   const [userWallet, setUserWallet] = useState<string | null>(null);
-  const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+  const [services, setServices] = useState<ServiceSLA[]>([]);
+  const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
+  const [totalEvaluationsCount, setTotalEvaluationsCount] = useState<number>(0);
+  const [contractAdmin, setContractAdmin] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isRegisterOpen, setIsRegisterOpen] = useState<boolean>(false);
+  const [copiedContract, setCopiedContract] = useState<boolean>(false);
+  const [toasts, setToasts] = useState<ToastNotification[]>([]);
 
-  // Registration modal
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [regId, setRegId] = useState('');
-  const [regName, setRegName] = useState('');
-  const [regEndpoint, setRegEndpoint] = useState('');
-  const [regCriteria, setRegCriteria] = useState('');
-  const [regThreshold, setRegThreshold] = useState('3');
+  // Pending write transaction states
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [auditingServiceId, setAuditingServiceId] = useState<string | null>(null);
 
-  // Service inspect modal
-  const [selectedServiceJson, setSelectedServiceJson] = useState<string | null>(null);
+  // Form state
+  const [formData, setFormData] = useState({
+    service_id: '',
+    name: '',
+    endpoint_url: '',
+    sla_criteria: '',
+    penalty_threshold: 3,
+  });
 
-  // Live consensus evaluation execution state
-  const [activeAuditingService, setActiveAuditingService] = useState<ServiceSLA | null>(null);
-  const [auditStep, setAuditStep] = useState<number>(0);
-  const [auditLogs, setAuditLogs] = useState<string[]>([]);
-  const [auditResult, setAuditResult] = useState<{ verdict: 'COMPLIANT' | 'DEGRADED' | 'VIOLATED'; score: number; summary: string } | null>(null);
+  const addToast = useCallback((type: ToastNotification['type'], title: string, message: string, txHash?: string): string => {
+    const id = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    setToasts((prev) => [...prev, { id, type, title, message, txHash }]);
+    if (type !== 'info') {
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 7000);
+    }
+    return id;
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('agentic_sla_services', JSON.stringify(services));
-  }, [services]);
-
-  useEffect(() => {
-    localStorage.setItem('agentic_sla_evaluations', JSON.stringify(evaluations));
-  }, [evaluations]);
-
-  const addToast = (type: 'success' | 'warning' | 'error' | 'info', title: string, message: string) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, type, title, message }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4500);
-  };
-
-  // MetaMask Auto-Connect & Event Listeners
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      window.ethereum
-        .request({ method: 'eth_accounts' })
-        .then((accounts) => {
-          const accs = accounts as string[];
-          if (accs && accs.length > 0) {
-            setUserWallet(accs[0]);
-          }
-        })
-        .catch(() => {});
-
-      const handleAccountsChanged = (...args: unknown[]) => {
-        const accounts = args[0] as string[];
-        if (accounts && accounts.length > 0) {
-          setUserWallet(accounts[0]);
-          addToast('info', 'Account Changed', `Active account: ${accounts[0].substring(0, 6)}...${accounts[0].substring(accounts[0].length - 4)}`);
-        } else {
-          setUserWallet(null);
-          addToast('info', 'Wallet Disconnected', 'MetaMask session disconnected.');
-        }
-      };
-
-      if (window.ethereum.on) {
-        window.ethereum.on('accountsChanged', handleAccountsChanged);
-      }
-
-      return () => {
-        if (window.ethereum?.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        }
-      };
+  const updateToast = useCallback((id: string, type: ToastNotification['type'], title: string, message: string, txHash?: string) => {
+    setToasts((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, type, title, message, txHash: txHash || t.txHash } : t))
+    );
+    if (type !== 'info') {
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 7000);
     }
   }, []);
 
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      try {
-        setIsConnectingWallet(true);
-        const accounts = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
-        if (accounts && accounts.length > 0) {
-          setUserWallet(accounts[0]);
-          addToast('success', 'Wallet Connected', `Connected: ${accounts[0].substring(0, 6)}...${accounts[0].substring(accounts[0].length - 4)}`);
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Helper to switch or add GenLayer Studio Network
+  const checkAndSwitchNetwork = async () => {
+    if (!window.ethereum) return;
+    try {
+      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+      if (currentChainId !== STUDIONET_CHAIN_ID_HEX) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: STUDIONET_CHAIN_ID_HEX }],
+          });
+        } catch (switchError: any) {
+          if (switchError.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: STUDIONET_CHAIN_ID_HEX,
+                  chainName: 'GenLayer Studio Network',
+                  rpcUrls: ['https://studio.genlayer.com/api'],
+                  nativeCurrency: { name: 'GEN Token', symbol: 'GEN', decimals: 18 },
+                  blockExplorerUrls: ['https://studio.genlayer.com'],
+                },
+              ],
+            });
+          } else {
+            throw switchError;
+          }
         }
-      } catch (err: unknown) {
-        const error = err as { message?: string };
-        addToast('error', 'Connection Rejected', error?.message || 'Failed to connect MetaMask wallet.');
-      } finally {
-        setIsConnectingWallet(false);
       }
-    } else {
-      addToast('error', 'MetaMask Missing', 'No Web3 wallet detected. Please install MetaMask to interact with the contract.');
+    } catch (err: any) {
+      console.warn('Chain switch error:', err);
+    }
+  };
+
+  // Connect MetaMask Wallet
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      addToast('error', 'MetaMask Missing', 'Please install the MetaMask extension to sign transactions on GenLayer.');
+      return;
+    }
+    try {
+      const accounts = (await window.ethereum.request({
+        method: 'eth_requestAccounts',
+      })) as string[];
+
+      if (accounts && accounts.length > 0) {
+        const addr = accounts[0].toLowerCase();
+        setUserWallet(addr);
+        addToast('success', 'Wallet Connected', `Authenticated as ${addr.slice(0, 6)}...${addr.slice(-4)}`);
+        await checkAndSwitchNetwork();
+      }
+    } catch (err: any) {
+      console.error('Wallet connection error:', err);
+      addToast('error', 'Connection Rejected', err?.message || 'MetaMask account request was rejected.');
     }
   };
 
   const disconnectWallet = () => {
     setUserWallet(null);
-    addToast('info', 'Wallet Disconnected', 'Your wallet has been disconnected.');
+    addToast('info', 'Disconnected', 'Wallet disconnected from active session.');
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedAddress(true);
-    addToast('info', 'Address Copied', 'Contract address copied to clipboard.');
-    setTimeout(() => setCopiedAddress(false), 2000);
-  };
-
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!userWallet) {
-      addToast('warning', 'Wallet Required', 'Please connect your Web3 wallet (MetaMask) before registering a service.');
-      connectWallet();
-      return;
-    }
-
-    if (!regId.trim() || !regName.trim() || !regEndpoint.trim() || !regCriteria.trim()) {
-      addToast('error', 'Validation Error', 'Please complete all required fields.');
-      return;
-    }
-
-    if (!regEndpoint.startsWith('http://') && !regEndpoint.startsWith('https://')) {
-      addToast('error', 'Invalid URL', 'Endpoint URL must begin with http:// or https://');
-      return;
-    }
-
-    const threshold = parseInt(regThreshold, 10);
-    if (isNaN(threshold) || threshold <= 0) {
-      addToast('error', 'Invalid Threshold', 'Penalty threshold must be a positive integer.');
-      return;
-    }
-
-    if (services.some((s) => s.service_id.toLowerCase() === regId.trim().toLowerCase())) {
-      addToast('error', 'Conflict', 'A service with this ID is already registered.');
-      return;
-    }
-
-    const newService: ServiceSLA = {
-      service_id: regId.trim().toLowerCase(),
-      name: regName.trim(),
-      provider: userWallet.toLowerCase(),
-      endpoint_url: regEndpoint.trim(),
-      sla_criteria: regCriteria.trim(),
-      total_evaluations: 0,
-      compliant_count: 0,
-      degraded_count: 0,
-      violated_count: 0,
-      consecutive_violations: 0,
-      penalty_threshold: threshold,
-      last_verdict: 'UNRESOLVED',
-      last_score: 0,
-      is_active: true,
-    };
-
-    setServices((prev) => [newService, ...prev]);
-    setIsRegisterModalOpen(false);
-    setRegId('');
-    setRegName('');
-    setRegEndpoint('');
-    setRegCriteria('');
-    setRegThreshold('3');
-
-    addToast('success', 'Service Registered', `Registered service "${newService.name}".`);
-  };
-
-  const startLiveEvaluation = (service: ServiceSLA) => {
-    if (!userWallet) {
-      addToast('warning', 'Wallet Required', 'Please connect your Web3 wallet (MetaMask) before triggering an on-chain AI quality audit.');
-      connectWallet();
-      return;
-    }
-
-    if (!service.is_active) {
-      addToast('warning', 'Service Penalized', 'Cannot evaluate an inactive or penalized service.');
-      return;
-    }
-
-    setActiveAuditingService(service);
-    setAuditStep(1);
-    setAuditLogs([
-      `[1/4] Initiating GenVM Web Probe on endpoint: ${service.endpoint_url}`,
-      `[gl.nondet.web.render] Dispatching secure HTTP GET request via evaluator ${userWallet.substring(0, 6)}...${userWallet.substring(userWallet.length - 4)}`,
-    ]);
-    setAuditResult(null);
-
-    // Step 2: Leader LLM evaluation
-    setTimeout(() => {
-      setAuditStep(2);
-      setAuditLogs((prev) => [
-        ...prev,
-        `[2/4] Leader Node executing LLM Quality Arbiter Prompt...`,
-        `[gl.nondet.exec_prompt] Analyzing payload against SLA specification: "${service.sla_criteria.substring(0, 48)}..."`,
-      ]);
-    }, 1200);
-
-    // Step 3: Validator Semantic Consensus
-    setTimeout(() => {
-      setAuditStep(3);
-      setAuditLogs((prev) => [
-        ...prev,
-        `[3/4] Running multi-validator semantic agreement check (gl.vm.run_nondet)...`,
-        `[Consensus Engine] Comparing Leader and Validator semantic verdicts for consistency...`,
-      ]);
-    }, 2400);
-
-    // Step 4: Finalize & write state
-    setTimeout(() => {
-      setAuditStep(4);
-
-      const isSimulatedFail = service.service_id.includes('legacy') || service.endpoint_url.includes('failure');
-      const isDegraded = service.service_id.includes('sepolia');
-
-      let verdict: 'COMPLIANT' | 'DEGRADED' | 'VIOLATED' = 'COMPLIANT';
-      let score = Math.floor(Math.random() * 8) + 93;
-      let summary = `Live evaluation verified: Endpoint responded with healthy telemetry. All SLA constraints satisfied.`;
-
-      if (isSimulatedFail) {
-        verdict = 'VIOLATED';
-        score = Math.floor(Math.random() * 15) + 10;
-        summary = `SLA Violation detected: Response timeout exceeded contract bounds. Required JSON attributes missing.`;
-      } else if (isDegraded) {
-        verdict = 'DEGRADED';
-        score = Math.floor(Math.random() * 15) + 65;
-        summary = `Service Degraded: Latency spike detected (1,150ms). Service functional but near warning threshold.`;
+  // Fetch On-Chain State directly from Intelligent Contract
+  const fetchOnChainState = useCallback(async () => {
+    try {
+      // 1. Read admin
+      try {
+        const adminRes = await readClient.readContract({
+          address: CONTRACT_ADDRESS,
+          functionName: 'get_admin',
+          args: [],
+        });
+        if (adminRes && typeof adminRes === 'string') {
+          setContractAdmin(adminRes);
+        }
+      } catch (e) {
+        console.warn('Could not read admin address:', e);
       }
 
-      setAuditResult({ verdict, score, summary });
-      setAuditLogs((prev) => [
-        ...prev,
-        `[4/4] Semantic consensus reached: ${verdict} (Score: ${score}/100)`,
-        `[gl.public.write] Deterministic state transition committed to GenLayer storage by ${userWallet.substring(0, 6)}...${userWallet.substring(userWallet.length - 4)}.`,
-      ]);
+      // 2. Read service count
+      const rawCount = await readClient.readContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'get_service_count',
+        args: [],
+      });
+      const count = Number(rawCount || 0);
 
-      // Update service record in memory
-      setServices((prev) =>
-        prev.map((s) => {
-          if (s.service_id !== service.service_id) return s;
+      // 3. Read each registered service directly from storage
+      const fetchedServices: ServiceSLA[] = [];
+      for (let i = 0; i < count; i++) {
+        try {
+          const serviceId = (await readClient.readContract({
+            address: CONTRACT_ADDRESS,
+            functionName: 'get_service_id_at',
+            args: [i],
+          })) as string;
 
-          const total = s.total_evaluations + 1;
-          const compliant = s.compliant_count + (verdict === 'COMPLIANT' ? 1 : 0);
-          const degraded = s.degraded_count + (verdict === 'DEGRADED' ? 1 : 0);
-          const violated = s.violated_count + (verdict === 'VIOLATED' ? 1 : 0);
-          const consecutive = verdict === 'COMPLIANT' ? 0 : verdict === 'VIOLATED' ? s.consecutive_violations + 1 : s.consecutive_violations;
-          const shouldDeactivate = consecutive >= s.penalty_threshold;
+          if (serviceId) {
+            const rawJson = await readClient.readContract({
+              address: CONTRACT_ADDRESS,
+              functionName: 'get_service_json',
+              args: [serviceId],
+            });
+            const parsed: ServiceSLA = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+            fetchedServices.push(parsed);
+          }
+        } catch (err) {
+          console.error(`Failed to read service at index ${i}:`, err);
+        }
+      }
+      setServices(fetchedServices);
 
-          return {
-            ...s,
-            total_evaluations: total,
-            compliant_count: compliant,
-            degraded_count: degraded,
-            violated_count: violated,
-            consecutive_violations: consecutive,
-            last_verdict: verdict,
-            last_score: score,
-            is_active: shouldDeactivate ? false : s.is_active,
-          };
+      // 4. Read total evaluations
+      const rawTotalEvals = await readClient.readContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'get_total_evaluations',
+        args: [],
+      });
+      const totalEvals = Number(rawTotalEvals || 0);
+      setTotalEvaluationsCount(totalEvals);
+
+      // 5. Read recent evaluations (last 10)
+      const fetchedEvaluations: EvaluationRecord[] = [];
+      const startIdx = Math.max(0, totalEvals - 10);
+      for (let i = totalEvals - 1; i >= startIdx; i--) {
+        try {
+          const evalRawJson = await readClient.readContract({
+            address: CONTRACT_ADDRESS,
+            functionName: 'get_evaluation_json',
+            args: [i],
+          });
+          const evalParsed: EvaluationRecord = typeof evalRawJson === 'string' ? JSON.parse(evalRawJson) : evalRawJson;
+          fetchedEvaluations.push({
+            ...evalParsed,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+        } catch (e) {
+          console.error(`Failed to load evaluation ${i}:`, e);
+        }
+      }
+      setEvaluations(fetchedEvaluations);
+    } catch (error: any) {
+      console.error('Error fetching on-chain state:', error);
+      addToast('error', 'RPC Read Error', error?.message || 'Failed to query GenLayer studionet RPC.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [addToast]);
+
+  // Initial load and wallet events
+  useEffect(() => {
+    fetchOnChainState();
+
+    if (window.ethereum) {
+      window.ethereum
+        .request({ method: 'eth_accounts' })
+        .then((accounts: any) => {
+          if (accounts && accounts.length > 0) {
+            setUserWallet(accounts[0].toLowerCase());
+          }
         })
-      );
+        .catch(console.error);
 
-      // Add evaluation log
-      const newEval: EvaluationRecord = {
-        evaluation_id: evaluations.length > 0 ? Math.max(...evaluations.map((e) => e.evaluation_id)) + 1 : 1,
-        service_id: service.service_id,
-        verdict,
-        score,
-        evaluator: userWallet.toLowerCase(),
-        summary,
-        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
+      const handleAccountsChanged = (accounts: unknown) => {
+        const accs = accounts as string[];
+        if (accs && accs.length > 0) {
+          setUserWallet(accs[0].toLowerCase());
+        } else {
+          setUserWallet(null);
+        }
       };
-      setEvaluations((prev) => [newEval, ...prev]);
 
-      addToast(
-        verdict === 'COMPLIANT' ? 'success' : verdict === 'DEGRADED' ? 'warning' : 'error',
-        `Audit Completed: ${verdict}`,
-        `${service.name} scored ${score}/100.`
+      const handleChainChanged = () => {
+        fetchOnChainState();
+      };
+
+      window.ethereum.on?.('accountsChanged', handleAccountsChanged);
+      window.ethereum.on?.('chainChanged', handleChainChanged);
+
+      return () => {
+        window.ethereum?.removeListener?.('accountsChanged', handleAccountsChanged);
+        window.ethereum?.removeListener?.('chainChanged', handleChainChanged);
+      };
+    }
+  }, [fetchOnChainState]);
+
+  // Real on-chain write: register_service
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userWallet) {
+      addToast('warning', 'Wallet Required', 'Please connect your MetaMask wallet before registering a service.');
+      return;
+    }
+    if (!formData.service_id.trim() || !formData.name.trim() || !formData.endpoint_url.trim() || !formData.sla_criteria.trim()) {
+      addToast('warning', 'Validation Error', 'All fields are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const toastId = addToast(
+      'info',
+      'MetaMask Signature Requested',
+      'Please approve and sign the register_service transaction in MetaMask...'
+    );
+
+    try {
+      await checkAndSwitchNetwork();
+
+      // Configure wallet client with injected MetaMask provider
+      const walletClient = createClient({
+        chain: studionet,
+        account: userWallet as `0x${string}`,
+        provider: window.ethereum as any,
+      });
+
+      const txHash = (await (walletClient.writeContract as any)({
+        address: CONTRACT_ADDRESS,
+        functionName: 'register_service',
+        args: [
+          formData.service_id.trim(),
+          formData.name.trim(),
+          formData.endpoint_url.trim(),
+          formData.sla_criteria.trim(),
+          Number(formData.penalty_threshold),
+        ],
+        value: 0n,
+      })) as string;
+
+      updateToast(
+        toastId,
+        'info',
+        'Transaction Pending',
+        `Transaction broadcast: ${txHash.slice(0, 10)}...${txHash.slice(-8)}. Waiting for GenLayer block confirmation...`,
+        txHash
       );
-    }, 3600);
+
+      // Wait for consensus receipt
+      await (readClient.waitForTransactionReceipt as any)({
+        hash: txHash,
+      });
+
+      updateToast(
+        toastId,
+        'success',
+        'Service Registered On-Chain',
+        `Service [${formData.service_id}] has been committed to GenLayer storage.`,
+        txHash
+      );
+
+      // Reset form and refetch state
+      setFormData({
+        service_id: '',
+        name: '',
+        endpoint_url: '',
+        sla_criteria: '',
+        penalty_threshold: 3,
+      });
+      setIsRegisterOpen(false);
+      await fetchOnChainState();
+    } catch (err: any) {
+      console.error('Registration failed:', err);
+      const msg = err?.message || 'Transaction was rejected or failed on-chain.';
+      updateToast(toastId, 'error', 'Transaction Failed', msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const filteredServices = services.filter((s) => {
-    const matchesSearch =
-      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  // Real on-chain write: evaluate_service ("AI Audit")
+  const handleEvaluate = async (serviceId: string) => {
+    if (!userWallet) {
+      addToast('warning', 'Wallet Required', 'Please connect your MetaMask wallet to trigger on-chain AI audits.');
+      return;
+    }
+
+    setAuditingServiceId(serviceId);
+    const toastId = addToast(
+      'info',
+      'MetaMask Signature Requested',
+      `Please sign the evaluate_service transaction for [${serviceId}] in MetaMask...`
+    );
+
+    try {
+      await checkAndSwitchNetwork();
+
+      const walletClient = createClient({
+        chain: studionet,
+        account: userWallet as `0x${string}`,
+        provider: window.ethereum as any,
+      });
+
+      const txHash = (await (walletClient.writeContract as any)({
+        address: CONTRACT_ADDRESS,
+        functionName: 'evaluate_service',
+        args: [serviceId],
+        value: 0n,
+      })) as string;
+
+      updateToast(
+        toastId,
+        'info',
+        'AI Consensus Pending',
+        `Tx ${txHash.slice(0, 10)}...${txHash.slice(-8)} submitted. GenLayer validators executing non-deterministic LLM consensus...`,
+        txHash
+      );
+
+      // Wait for receipt
+      await (readClient.waitForTransactionReceipt as any)({
+        hash: txHash,
+      });
+
+      updateToast(
+        toastId,
+        'success',
+        'AI Audit Confirmed',
+        `GenLayer validators reached consensus for [${serviceId}]. Storage updated.`,
+        txHash
+      );
+
+      await fetchOnChainState();
+    } catch (err: any) {
+      console.error('Audit execution failed:', err);
+      const msg = err?.message || 'Evaluation transaction failed or was rejected.';
+      updateToast(toastId, 'error', 'Audit Execution Failed', msg);
+    } finally {
+      setAuditingServiceId(null);
+    }
+  };
+
+  const handleCopyContract = () => {
+    navigator.clipboard.writeText(CONTRACT_ADDRESS);
+    setCopiedContract(true);
+    setTimeout(() => setCopiedContract(false), 2000);
+  };
+
+  const fillSampleService = () => {
+    setFormData({
+      service_id: 'coingecko-ping',
+      name: 'CoinGecko Spot Oracle Gateway',
+      endpoint_url: 'https://api.coingecko.com/api/v3/ping',
+      sla_criteria: 'HTTP 200 with valid status JSON and server heartbeat ping.',
+      penalty_threshold: 3,
+    });
+  };
+
+  const filteredServices = services.filter(
+    (s) =>
       s.service_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.endpoint_url.toLowerCase().includes(searchTerm.toLowerCase());
-
-    if (!matchesSearch) return false;
-    if (statusFilter === 'ACTIVE') return s.is_active;
-    if (statusFilter === 'PENALIZED') return !s.is_active;
-    if (statusFilter === 'COMPLIANT') return s.last_verdict === 'COMPLIANT';
-    if (statusFilter === 'VIOLATED') return s.last_verdict === 'VIOLATED';
-    return true;
-  });
-
-  const totalServices = services.length;
-  const activeServices = services.filter((s) => s.is_active).length;
-  const totalEvaluationsCount = services.reduce((acc, s) => acc + s.total_evaluations, 0);
-  const compliantEvals = services.reduce((acc, s) => acc + s.compliant_count, 0);
-  const consensusHealth = totalEvaluationsCount > 0 ? Math.round((compliantEvals / totalEvaluationsCount) * 100) : 100;
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.provider.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col selection:bg-zinc-800 selection:text-white">
-      {/* Toast Notification Container */}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col space-y-2.5 max-w-sm pointer-events-none">
+    <div className="min-h-screen bg-black text-white selection:bg-neutral-800 selection:text-white flex flex-col font-sans">
+      {/* Toast Notifications */}
+      <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-start gap-3 p-4 rounded-xl bg-zinc-900 border border-zinc-800 shadow-2xl transition-all duration-200"
+            className="pointer-events-auto bg-[#0a0a0a] border border-neutral-800 rounded-xl p-4 shadow-2xl transition-all duration-200"
           >
-            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
-            {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
-            {toast.type === 'error' && <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
-            {toast.type === 'info' && <Info className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />}
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm text-white">{toast.title}</div>
-              <div className="text-xs text-zinc-400 leading-relaxed mt-0.5">{toast.message}</div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                {toast.type === 'info' && <RefreshCw className="w-4 h-4 text-neutral-400 animate-spin mt-0.5" />}
+                {toast.type === 'success' && <Check className="w-4 h-4 text-green-500 mt-0.5" />}
+                {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-red-500 mt-0.5" />}
+                {toast.type === 'warning' && <AlertCircle className="w-4 h-4 text-yellow-500 mt-0.5" />}
+                <div>
+                  <div className="text-xs font-semibold text-white uppercase tracking-wider">{toast.title}</div>
+                  <div className="text-xs text-neutral-400 mt-1 leading-relaxed">{toast.message}</div>
+                  {toast.txHash && (
+                    <a
+                      href={`https://studio.genlayer.com/tx/${toast.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-mono text-neutral-400 hover:text-white mt-2 transition-colors"
+                    >
+                      View on Explorer <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => removeToast(toast.id)}
+                className="text-neutral-500 hover:text-neutral-300 p-0.5 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button
-              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-              className="text-zinc-500 hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         ))}
       </div>
 
-      {/* Top Navigation Bar: Clean Linear-style Navigation */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#09090b]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center text-white">
-              <ShieldCheck className="w-4 h-4 text-zinc-200 stroke-[2]" />
-            </div>
-            <div className="flex items-center space-x-2.5">
-              <span className="font-medium text-base sm:text-lg tracking-tight text-white">
+      {/* Top Navigation */}
+      <header className="border-b border-neutral-800/80 bg-black/90 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              <span className="font-mono text-xs font-semibold tracking-widest text-white uppercase">
                 Agentic SLA Arbiter
               </span>
-              <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded bg-zinc-900 text-zinc-400 border border-white/10">
-                GenVM 2.0
-              </span>
+            </div>
+            <span className="hidden sm:inline-block text-neutral-600 font-mono text-xs">/</span>
+            <div className="hidden sm:flex items-center gap-2 text-neutral-500 font-mono text-xs">
+              <Database className="w-3.5 h-3.5" />
+              <span>Studionet (61999)</span>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Studionet Status Indicator */}
-            <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-zinc-900/90 border border-white/10 text-xs">
-              <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-zinc-300 font-medium capitalize">{NETWORK_NAME}</span>
-            </div>
-
-            {/* Contract Address Indicator */}
-            <div className="hidden xl:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900/90 border border-white/10 text-xs font-mono text-zinc-400">
-              <Cpu className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="text-[11px] text-zinc-500">Contract:</span>
-              <span className="text-zinc-300">{CONTRACT_ADDRESS.substring(0, 6)}...{CONTRACT_ADDRESS.substring(CONTRACT_ADDRESS.length - 4)}</span>
-              <button
-                onClick={() => copyToClipboard(CONTRACT_ADDRESS)}
-                title="Copy contract address"
-                className="hover:text-white transition-colors"
-              >
-                {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-zinc-500" />}
-              </button>
-            </div>
-
-            {/* Explorer Link */}
-            <a
-              href={EXPLORER_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setIsRefreshing(true);
+                fetchOnChainState();
+              }}
+              disabled={isRefreshing}
+              className="rounded-full border border-neutral-800 hover:border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors p-2 text-neutral-400 hover:text-white"
+              title="Refresh on-chain data"
             >
-              <span>Explorer</span>
-              <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-            </a>
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-white' : ''}`} />
+            </button>
 
-            {/* CONNECT WALLET BUTTON */}
-            {!userWallet ? (
-              <button
-                onClick={connectWallet}
-                disabled={isConnectingWallet}
-                className="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 active:scale-[0.98] transition-all font-medium text-xs disabled:opacity-50"
-              >
-                {isConnectingWallet ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-zinc-950" />
-                ) : (
-                  <Wallet className="w-3.5 h-3.5 stroke-[2]" />
-                )}
-                <span>{isConnectingWallet ? 'Connecting...' : 'Connect Wallet'}</span>
-              </button>
-            ) : (
-              <div className="flex items-center space-x-1.5">
-                <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-zinc-200 font-mono text-xs font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  <Wallet className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>{userWallet.substring(0, 6)}...{userWallet.substring(userWallet.length - 4)}</span>
+            {userWallet ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-800 bg-[#0a0a0a] text-xs font-mono text-neutral-300">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <span>{userWallet.slice(0, 6)}...{userWallet.slice(-4)}</span>
                 </div>
                 <button
                   onClick={disconnectWallet}
+                  className="rounded-full border border-neutral-800 hover:border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors p-2 text-neutral-400 hover:text-white"
                   title="Disconnect wallet"
-                  className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-white transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
+            ) : (
+              <button
+                onClick={connectWallet}
+                className="rounded-full border border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors text-white text-xs px-4 py-1.5 flex items-center gap-2 font-mono"
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                <span>Connect Wallet</span>
+              </button>
             )}
-
-            {/* Register Service Button */}
-            <button
-              onClick={() => {
-                if (!userWallet) {
-                  addToast('warning', 'Wallet Required', 'Please connect your Web3 wallet (MetaMask) before registering a service.');
-                  connectWallet();
-                  return;
-                }
-                setIsRegisterModalOpen(true);
-              }}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] border border-white/10 text-white font-medium text-xs transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5 text-zinc-300" />
-              <span>Register SLA</span>
-            </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
-        {/* Hero Section: Taste Skill Anti-Slop (No Centered Slop, Crisp Value Prop) */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2">
-          <div className="lg:col-span-7 space-y-5">
-            <div className="inline-flex items-center space-x-2 px-2.5 py-1 rounded-md bg-zinc-900 border border-white/10 text-xs text-zinc-300 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span>Decentralized AI Quality Arbiter</span>
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white leading-[1.15]">
-              Autonomous Quality Arbiter for Web3 Infrastructure
+      {/* Main Container */}
+      <main className="max-w-6xl mx-auto px-6 py-12 flex-1 w-full space-y-16">
+        {/* Hero & Intro Section */}
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+              Autonomous Quality Verification
             </h1>
-
-            <p className="text-sm sm:text-base text-zinc-400 leading-relaxed max-w-[65ch]">
-              Verifiable quality audits over web endpoints and oracle feeds using GenLayer intelligent contracts.
-              Consensus nodes execute LLM evaluations, verify semantic agreement, and enforce automated on-chain penalty slashing.
+            <p className="text-sm sm:text-base text-neutral-400 max-w-2xl leading-relaxed">
+              Verifiable SLA enforcement on GenLayer. Non-deterministic web probes and LLM consensus
+              autonomously arbitrate service performance directly on-chain.
             </p>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              {!userWallet ? (
-                <button
-                  onClick={connectWallet}
-                  className="px-4 py-2.5 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 active:scale-[0.98] font-medium text-xs transition-all flex items-center space-x-2 shadow-sm"
-                >
-                  <Wallet className="w-3.5 h-3.5" />
-                  <span>Connect Wallet to Get Started</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => setIsRegisterModalOpen(true)}
-                  className="px-4 py-2.5 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 active:scale-[0.98] font-medium text-xs transition-all flex items-center space-x-2 shadow-sm"
-                >
-                  <span>Register New Service</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <a
-                href="#services-section"
-                className="px-4 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] border border-white/10 text-zinc-300 hover:text-white font-medium text-xs transition-colors"
+          {/* Contract Address Bar */}
+          <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono text-neutral-400">
+            <div className="flex items-center gap-2 bg-[#0a0a0a] border border-neutral-800/80 rounded-xl px-3 py-2">
+              <span className="text-neutral-500">Contract:</span>
+              <span className="text-neutral-300">{CONTRACT_ADDRESS}</span>
+              <button
+                onClick={handleCopyContract}
+                className="text-neutral-400 hover:text-white transition-colors ml-1"
+                title="Copy address"
               >
-                Explore Monitored Services
-              </a>
+                {copiedContract ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
             </div>
-          </div>
 
-          {/* Metrics Panel: Data Breathes without Generic Boxes */}
-          <div className="lg:col-span-5 grid grid-cols-2 gap-3">
-            <div className="p-4 rounded-xl taste-card space-y-1">
-              <div className="flex items-center space-x-2 text-zinc-500 text-xs font-medium">
-                <Server className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Monitored</span>
+            {contractAdmin && (
+              <div className="flex items-center gap-2 bg-[#0a0a0a] border border-neutral-800/80 rounded-xl px-3 py-2">
+                <span className="text-neutral-500">Admin:</span>
+                <span className="text-neutral-300">{contractAdmin.slice(0, 6)}...{contractAdmin.slice(-4)}</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-semibold text-white font-mono">{totalServices}</div>
-              <div className="text-[11px] text-zinc-400">{activeServices} active on-chain</div>
-            </div>
+            )}
 
-            <div className="p-4 rounded-xl taste-card space-y-1">
-              <div className="flex items-center space-x-2 text-zinc-500 text-xs font-medium">
-                <Activity className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Audits</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-semibold text-white font-mono">{totalEvaluationsCount}</div>
-              <div className="text-[11px] text-zinc-400">Verifiable receipts</div>
-            </div>
-
-            <div className="p-4 rounded-xl taste-card space-y-1">
-              <div className="flex items-center space-x-2 text-zinc-500 text-xs font-medium">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Agreement</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-semibold text-emerald-400 font-mono">{consensusHealth}%</div>
-              <div className="text-[11px] text-zinc-400">Semantic consensus</div>
-            </div>
-
-            <div className="p-4 rounded-xl taste-card space-y-1">
-              <div className="flex items-center space-x-2 text-zinc-500 text-xs font-medium">
-                <Lock className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Slashing</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-semibold text-white font-mono">
-                {services.filter((s) => !s.is_active).length}
-              </div>
-              <div className="text-[11px] text-zinc-500">Auto-deactivated</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Services Control Section */}
-        <section id="services-section" className="space-y-6 pt-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-white tracking-tight flex items-center space-x-2">
-                <BarChart3 className="w-5 h-5 text-zinc-400" />
-                <span>Monitored Web Services & Feeds</span>
-              </h2>
-              <p className="text-xs text-zinc-500 mt-1">
-                Inspect registered endpoints, trigger AI evaluations, and verify on-chain quality scores.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Search Box */}
-              <div className="relative min-w-[220px]">
-                <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Filter by ID, name, or URL..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 rounded-lg taste-input text-xs text-white placeholder-zinc-500 outline-none"
-                />
-              </div>
-
-              {/* Status Filter Tabs */}
-              <div className="flex items-center p-1 rounded-lg bg-zinc-900 border border-white/10 text-xs font-medium text-zinc-400">
-                {(['ALL', 'ACTIVE', 'PENALIZED', 'COMPLIANT', 'VIOLATED'] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setStatusFilter(filter)}
-                    className={`px-2.5 py-1 rounded-md transition-colors capitalize ${
-                      statusFilter === filter
-                        ? 'bg-zinc-800 text-white font-medium'
-                        : 'hover:text-white'
-                    }`}
-                  >
-                    {filter.toLowerCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Service Cards Grid: Taste Skill Asymmetric & Rhythmic Display */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredServices.map((service) => {
-              const isPenalized = !service.is_active;
-              const compliantRate =
-                service.total_evaluations > 0
-                  ? Math.round((service.compliant_count / service.total_evaluations) * 100)
-                  : 100;
-
-              return (
-                <div
-                  key={service.service_id}
-                  className="rounded-xl taste-card p-5 flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-3.5">
-                    {/* Card Top Row */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              isPenalized
-                                ? 'bg-red-500'
-                                : service.last_verdict === 'COMPLIANT'
-                                ? 'bg-emerald-400'
-                                : service.last_verdict === 'DEGRADED'
-                                ? 'bg-amber-400'
-                                : 'bg-zinc-600'
-                            }`}
-                          />
-                          <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider">
-                            {service.service_id}
-                          </span>
-                        </div>
-                        <h3 className="font-medium text-white text-base mt-1 leading-snug">
-                          {service.name}
-                        </h3>
-                      </div>
-
-                      <div className="flex flex-col items-end space-y-1.5 shrink-0">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
-                            isPenalized
-                              ? 'badge-penalized'
-                              : service.last_verdict === 'COMPLIANT'
-                              ? 'badge-compliant'
-                              : service.last_verdict === 'DEGRADED'
-                              ? 'badge-degraded'
-                              : service.last_verdict === 'VIOLATED'
-                              ? 'badge-violated'
-                              : 'bg-zinc-900 text-zinc-500 border border-white/10'
-                          }`}
-                        >
-                          {isPenalized ? 'PENALIZED' : service.last_verdict}
-                        </span>
-                        <button
-                          onClick={() => setSelectedServiceJson(JSON.stringify(service, null, 2))}
-                          className="text-[11px] text-zinc-500 hover:text-zinc-300 flex items-center space-x-1 transition-colors"
-                          title="View on-chain JSON"
-                        >
-                          <Code className="w-3 h-3" />
-                          <span>JSON</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Endpoint Target URL */}
-                    <div className="p-2.5 rounded-lg bg-black/40 border border-white/5 space-y-1">
-                      <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                        <span className="flex items-center space-x-1">
-                          <Globe className="w-3 h-3 text-zinc-400" />
-                          <span>Endpoint Target</span>
-                        </span>
-                        <a
-                          href={service.endpoint_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-white flex items-center space-x-0.5 transition-colors"
-                        >
-                          <span>Open</span>
-                          <ExternalLink className="w-2.5 h-2.5" />
-                        </a>
-                      </div>
-                      <div className="text-xs font-mono text-zinc-300 truncate" title={service.endpoint_url}>
-                        {service.endpoint_url}
-                      </div>
-                    </div>
-
-                    {/* SLA Criteria */}
-                    <div className="space-y-1">
-                      <div className="text-[11px] text-zinc-500 font-medium">SLA Specification:</div>
-                      <p className="text-xs text-zinc-400 bg-zinc-950/40 p-2.5 rounded-lg border border-white/5 line-clamp-2 leading-relaxed">
-                        {service.sla_criteria}
-                      </p>
-                    </div>
-
-                    {/* Provider Info */}
-                    <div className="text-[10px] text-zinc-500 flex items-center justify-between px-0.5">
-                      <span>Provider:</span>
-                      <span className="font-mono text-zinc-400">
-                        {service.provider.substring(0, 6)}...{service.provider.substring(service.provider.length - 4)}
-                      </span>
-                    </div>
-
-                    {/* Scores & Violations */}
-                    <div className="grid grid-cols-2 gap-2 pt-0.5">
-                      <div className="p-2.5 rounded-lg bg-zinc-950/40 border border-white/5">
-                        <div className="text-[10px] text-zinc-500 font-medium">Quality Score</div>
-                        <div className="text-lg font-semibold font-mono text-white flex items-baseline space-x-1 mt-0.5">
-                          <span>{service.last_score}</span>
-                          <span className="text-xs font-normal text-zinc-600">/ 100</span>
-                        </div>
-                      </div>
-
-                      <div className="p-2.5 rounded-lg bg-zinc-950/40 border border-white/5">
-                        <div className="text-[10px] text-zinc-500 font-medium">Consecutive Breaches</div>
-                        <div className="text-lg font-semibold font-mono flex items-baseline space-x-1 mt-0.5">
-                          <span
-                            className={
-                              service.consecutive_violations >= service.penalty_threshold
-                                ? 'text-red-400'
-                                : service.consecutive_violations > 0
-                                ? 'text-amber-400'
-                                : 'text-zinc-400'
-                            }
-                          >
-                            {service.consecutive_violations}
-                          </span>
-                          <span className="text-xs font-normal text-zinc-600">/ {service.penalty_threshold} max</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Metrics Bar */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[11px] text-zinc-500">
-                        <span>Compliance Rate</span>
-                        <span className="font-mono text-zinc-300">{compliantRate}% ({service.compliant_count}/{service.total_evaluations})</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            isPenalized ? 'bg-red-500' : 'bg-zinc-200'
-                          }`}
-                          style={{ width: `${service.total_evaluations > 0 ? compliantRate : 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Action Button */}
-                  <div className="pt-2 border-t border-white/5">
-                    {isPenalized ? (
-                      <div className="w-full py-2 px-3 rounded-lg bg-zinc-900 border border-white/10 text-zinc-400 text-xs font-medium flex items-center justify-center space-x-2">
-                        <AlertTriangle className="w-3.5 h-3.5 text-zinc-500" />
-                        <span>SLA Breached and Deactivated</span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startLiveEvaluation(service)}
-                        className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] border border-white/10 hover:border-white/20 text-zinc-200 hover:text-white font-medium text-xs transition-all flex items-center justify-center space-x-2"
-                      >
-                        {userWallet ? (
-                          <>
-                            <Zap className="w-3.5 h-3.5 text-zinc-400" />
-                            <span>Trigger AI Audit (gl.evaluate_service)</span>
-                          </>
-                        ) : (
-                          <>
-                            <Wallet className="w-3.5 h-3.5 text-zinc-400" />
-                            <span>Connect Wallet to Audit</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Evaluation History Table Section */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white tracking-tight flex items-center space-x-2">
-                <Terminal className="w-5 h-5 text-zinc-400" />
-                <span>On-Chain Quality Audit Records</span>
-              </h2>
-              <p className="text-xs text-zinc-500 mt-1">
-                Arbitration receipts committed by GenLayer consensus nodes with AI reasoning logs.
-              </p>
-            </div>
-            <span className="text-xs font-mono text-zinc-400 px-2.5 py-1 rounded bg-zinc-900 border border-white/10">
-              Total Audits: {evaluations.length}
-            </span>
-          </div>
-
-          <div className="rounded-xl taste-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-900/90 border-b border-white/10 text-zinc-400 uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="py-3 px-4 font-medium">Audit ID</th>
-                    <th className="py-3 px-4 font-medium">Service ID</th>
-                    <th className="py-3 px-4 font-medium">Verdict</th>
-                    <th className="py-3 px-4 font-medium">Quality Score</th>
-                    <th className="py-3 px-4 font-medium">AI Arbitrator Summary</th>
-                    <th className="py-3 px-4 font-medium">Evaluator Node / User</th>
-                    <th className="py-3 px-4 font-medium">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-zinc-300">
-                  {evaluations.map((item) => (
-                    <tr key={item.evaluation_id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-medium text-zinc-300">
-                        #{item.evaluation_id}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-white font-medium">
-                        {item.service_id}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
-                            item.verdict === 'COMPLIANT'
-                              ? 'badge-compliant'
-                              : item.verdict === 'DEGRADED'
-                              ? 'badge-degraded'
-                              : 'badge-violated'
-                          }`}
-                        >
-                          {item.verdict}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-white font-medium">
-                        <span>{item.score}</span>
-                        <span className="text-zinc-600 font-normal">/100</span>
-                      </td>
-                      <td className="py-3.5 px-4 max-w-md text-zinc-400 leading-relaxed font-normal">
-                        {item.summary}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-zinc-500 text-[11px]">
-                        {item.evaluator.substring(0, 6)}...{item.evaluator.substring(item.evaluator.length - 4)}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-zinc-500 text-[11px] whitespace-nowrap">
-                        {item.timestamp}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-white/[0.08] bg-[#09090b] py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
-          <div className="flex items-center space-x-2">
-            <ShieldCheck className="w-4 h-4 text-zinc-400" />
-            <span>Agentic SLA Arbiter &copy; 2026 GenLayer Ecosystem. All rights reserved.</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <a
-              href="https://github.com/leonxlnx/taste-skill"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-zinc-300 transition-colors"
-            >
-              Taste Design Standard
-            </a>
-            <span>&bull;</span>
             <a
               href={EXPLORER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-zinc-300 transition-colors"
+              className="rounded-full border border-neutral-800 hover:border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors text-neutral-400 hover:text-white px-3 py-2 flex items-center gap-1.5"
             >
-              Studionet Explorer
+              <span>Explorer</span>
+              <ExternalLink className="w-3 h-3" />
             </a>
-            <span>&bull;</span>
-            <span className="font-mono text-zinc-500" title={`RPC URL: ${RPC_URL}`}>RPC: {RPC_URL.replace('https://', '')}</span>
-            <span>&bull;</span>
-            <span className="font-mono text-zinc-600">{CONTRACT_ADDRESS.substring(0, 10)}...</span>
           </div>
         </div>
-      </footer>
 
-      {/* Registration Modal */}
-      {isRegisterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-xl bg-zinc-950 border border-white/10 p-6 sm:p-7 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center space-x-2.5">
-                <div className="p-2 rounded-lg bg-zinc-900 border border-white/10 text-zinc-200">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-white">Register Service for SLA Monitoring</h3>
-                  <p className="text-xs text-zinc-400">Deploy a verifiable quality guarantee on GenLayer.</p>
+        {/* High-Level Metrics Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-5 space-y-1">
+            <div className="text-xs text-neutral-500 font-mono uppercase tracking-wider">Services Registered</div>
+            <div className="text-2xl font-mono font-semibold text-white">
+              {isLoading ? '...' : services.length}
+            </div>
+            <div className="text-[11px] text-neutral-500 font-mono">On-chain storage array</div>
+          </div>
+
+          <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-5 space-y-1">
+            <div className="text-xs text-neutral-500 font-mono uppercase tracking-wider">Total AI Audits</div>
+            <div className="text-2xl font-mono font-semibold text-white">
+              {isLoading ? '...' : totalEvaluationsCount}
+            </div>
+            <div className="text-[11px] text-neutral-500 font-mono">Consensus executions</div>
+          </div>
+
+          <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-5 space-y-1">
+            <div className="text-xs text-neutral-500 font-mono uppercase tracking-wider">Active Status</div>
+            <div className="text-2xl font-mono font-semibold text-white">
+              {isLoading ? '...' : services.filter((s) => s.is_active).length}
+            </div>
+            <div className="text-[11px] text-neutral-500 font-mono">Unpenalized endpoints</div>
+          </div>
+
+          <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-5 space-y-1">
+            <div className="text-xs text-neutral-500 font-mono uppercase tracking-wider">Execution Model</div>
+            <div className="text-xl font-mono font-semibold text-white truncate">GenVM LLM</div>
+            <div className="text-[11px] text-neutral-500 font-mono">Semantic consensus</div>
+          </div>
+        </div>
+
+        {/* Services Section */}
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-white">Registered Service Endpoints</h2>
+              <p className="text-xs text-neutral-400 font-mono">
+                Live on-chain SLAs tracked and arbitrated by GenLayer intelligent contracts.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Filter by ID or name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-[#050505] border border-neutral-800 text-white rounded-full pl-8 pr-4 py-1.5 text-xs font-mono focus:border-neutral-600 outline-none w-48 sm:w-64 placeholder:text-neutral-600"
+                />
+              </div>
+
+              <button
+                onClick={() => setIsRegisterOpen(true)}
+                className="rounded-full border border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors text-white text-xs px-4 py-1.5 flex items-center gap-1.5 font-mono shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Register Service</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Services List / Empty State */}
+          {isLoading ? (
+            <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-12 text-center space-y-3">
+              <RefreshCw className="w-6 h-6 animate-spin text-neutral-500 mx-auto" />
+              <div className="text-xs font-mono text-neutral-400">Loading on-chain records from GenLayer studionet...</div>
+            </div>
+          ) : filteredServices.length === 0 ? (
+            <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-12 text-center space-y-4">
+              <div className="w-10 h-10 rounded-full border border-neutral-800 flex items-center justify-center mx-auto text-neutral-600">
+                <Server className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-mono text-white">No services registered on-chain yet</div>
+                <div className="text-xs text-neutral-500 max-w-md mx-auto">
+                  The smart contract currently has 0 registered services. Connect your wallet and register
+                  the first service to start autonomous SLA arbitration.
                 </div>
               </div>
               <button
-                onClick={() => setIsRegisterModalOpen(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+                onClick={() => {
+                  fillSampleService();
+                  setIsRegisterOpen(true);
+                }}
+                className="rounded-full border border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors text-white text-xs px-4 py-2 font-mono"
               >
-                <X className="w-5 h-5" />
+                Register Sample Service
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredServices.map((service) => {
+                const isAuditing = auditingServiceId === service.service_id;
+                return (
+                  <div
+                    key={service.service_id}
+                    className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-6 flex flex-col justify-between space-y-5 hover:border-neutral-700 transition-colors"
+                  >
+                    <div className="space-y-4">
+                      {/* Header row: ID + Status accent */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-mono text-neutral-400">{service.service_id}</div>
+                          <div className="text-base font-medium text-white mt-0.5">{service.name}</div>
+                        </div>
+
+                        {/* Terminal style status accents: COMPLIANT (text-green-500), VIOLATED (text-red-500) */}
+                        <div className="font-mono text-xs uppercase shrink-0 pt-0.5">
+                          {!service.is_active ? (
+                            <span className="text-red-500">[PENALIZED]</span>
+                          ) : service.last_verdict === 'COMPLIANT' ? (
+                            <span className="text-green-500">● COMPLIANT</span>
+                          ) : service.last_verdict === 'VIOLATED' ? (
+                            <span className="text-red-500">● VIOLATED</span>
+                          ) : service.last_verdict === 'DEGRADED' ? (
+                            <span className="text-yellow-500">● DEGRADED</span>
+                          ) : (
+                            <span className="text-neutral-500">○ UNRESOLVED</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Endpoint URL & Criteria */}
+                      <div className="space-y-2 text-xs font-mono">
+                        <div className="bg-[#050505] border border-neutral-900 rounded-lg p-2.5 break-all text-neutral-400">
+                          <span className="text-neutral-600 select-none">URL: </span>
+                          {service.endpoint_url}
+                        </div>
+                        <p className="text-neutral-400 font-sans text-xs line-clamp-2 leading-relaxed">
+                          {service.sla_criteria}
+                        </p>
+                      </div>
+
+                      {/* On-Chain Metrics Grid */}
+                      <div className="grid grid-cols-4 gap-2 pt-2 border-t border-neutral-900 text-center font-mono">
+                        <div className="p-2 bg-[#050505] rounded-lg">
+                          <div className="text-[10px] text-neutral-500">Score</div>
+                          <div className="text-xs font-semibold text-white mt-0.5">
+                            {service.last_score > 0 ? `${service.last_score}%` : 'N/A'}
+                          </div>
+                        </div>
+                        <div className="p-2 bg-[#050505] rounded-lg">
+                          <div className="text-[10px] text-neutral-500">Evals</div>
+                          <div className="text-xs font-semibold text-white mt-0.5">
+                            {service.total_evaluations}
+                          </div>
+                        </div>
+                        <div className="p-2 bg-[#050505] rounded-lg">
+                          <div className="text-[10px] text-neutral-500">Passed</div>
+                          <div className="text-xs font-semibold text-green-500 mt-0.5">
+                            {service.compliant_count}
+                          </div>
+                        </div>
+                        <div className="p-2 bg-[#050505] rounded-lg">
+                          <div className="text-[10px] text-neutral-500">Violations</div>
+                          <div className="text-xs font-semibold text-red-500 mt-0.5">
+                            {service.violated_count}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className="flex items-center justify-between pt-3 border-t border-neutral-900">
+                      <div className="text-[11px] font-mono text-neutral-500 truncate max-w-[180px]">
+                        by {service.provider.slice(0, 6)}...{service.provider.slice(-4)}
+                      </div>
+
+                      <button
+                        onClick={() => handleEvaluate(service.service_id)}
+                        disabled={isAuditing || !service.is_active}
+                        className={`rounded-full border border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors text-white text-xs px-4 py-1.5 flex items-center gap-1.5 font-mono ${
+                          isAuditing ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {isAuditing ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin text-white" />
+                            <span>Arbitrating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-3 h-3 text-neutral-300" />
+                            <span>AI Audit</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* On-Chain Arbitration Feed */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-white">Consensus Arbitration Log</h2>
+              <p className="text-xs text-neutral-400 font-mono">
+                Recent evaluation records parsed from GenLayer contract storage.
+              </p>
+            </div>
+            <div className="font-mono text-xs text-neutral-500">
+              Total Recorded: {totalEvaluationsCount}
+            </div>
+          </div>
+
+          {evaluations.length === 0 ? (
+            <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-8 text-center text-xs font-mono text-neutral-500">
+              No evaluation records stored yet. Execute an AI Audit above to trigger GenLayer consensus.
+            </div>
+          ) : (
+            <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl divide-y divide-neutral-900 font-mono text-xs overflow-hidden">
+              {evaluations.map((item) => (
+                <div key={item.evaluation_id} className="p-4 space-y-2 hover:bg-neutral-950/50 transition-colors">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-neutral-500">#{item.evaluation_id}</span>
+                      <span className="text-white font-semibold">{item.service_id}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {item.verdict === 'COMPLIANT' && <span className="text-green-500">● COMPLIANT</span>}
+                      {item.verdict === 'VIOLATED' && <span className="text-red-500">● VIOLATED</span>}
+                      {item.verdict === 'DEGRADED' && <span className="text-yellow-500">● DEGRADED</span>}
+                      <span className="text-neutral-300 font-semibold">{item.score}/100</span>
+                      {item.timestamp && <span className="text-neutral-600 text-[11px]">{item.timestamp}</span>}
+                    </div>
+                  </div>
+
+                  <p className="text-neutral-400 font-sans text-xs leading-relaxed">
+                    {item.summary}
+                  </p>
+
+                  <div className="text-[11px] text-neutral-600 truncate">
+                    Evaluator: {item.evaluator}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Technical Specification Box */}
+        <div className="bg-[#0a0a0a] border border-neutral-800/80 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2 text-white font-mono text-xs font-semibold tracking-wider uppercase">
+            <Terminal className="w-4 h-4 text-neutral-400" />
+            <span>GenLayer Intelligent Contract Interface</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono text-neutral-400">
+            <div className="bg-[#050505] p-3 rounded-xl border border-neutral-900 space-y-1">
+              <div className="text-neutral-500 text-[11px]">Write Methods (MetaMask Gas)</div>
+              <div className="text-neutral-200">register_service(id, name, url, criteria, threshold)</div>
+              <div className="text-neutral-200">evaluate_service(id)</div>
+            </div>
+
+            <div className="bg-[#050505] p-3 rounded-xl border border-neutral-900 space-y-1">
+              <div className="text-neutral-500 text-[11px]">View Methods (Gasless RPC)</div>
+              <div className="text-neutral-200">get_service_count() -&gt; int</div>
+              <div className="text-neutral-200">get_service_json(id) -&gt; json_str</div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Register Service Modal */}
+      {isRegisterOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0a0a0a] border border-neutral-800 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-900">
+              <div className="space-y-0.5">
+                <h3 className="text-base font-semibold text-white">Register SLA Endpoint</h3>
+                <p className="text-xs text-neutral-400 font-mono">Sign transaction via MetaMask onto GenLayer</p>
+              </div>
+              <button
+                onClick={() => setIsRegisterOpen(false)}
+                className="text-neutral-500 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleRegister} className="space-y-4 text-xs">
-              {/* Connected Wallet Banner inside Form */}
-              <div className="p-3 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-xs">
-                  <Wallet className="w-4 h-4 text-zinc-400" />
-                  <span className="text-zinc-400">Signing Account:</span>
-                  <span className="font-mono text-white font-medium">
-                    {userWallet ? `${userWallet.substring(0, 6)}...${userWallet.substring(userWallet.length - 4)}` : 'Not Connected'}
-                  </span>
-                </div>
-                {userWallet ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
-                    Authenticated
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={connectWallet}
-                    className="text-[10px] px-2.5 py-1 rounded bg-white text-zinc-950 font-medium hover:bg-zinc-200 transition-colors"
-                  >
-                    Connect
-                  </button>
-                )}
-              </div>
-
+            <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">Service Identifier (Unique Key)</label>
+                <label className="text-xs font-mono text-neutral-400">Service Identifier (slug)</label>
                 <input
                   type="text"
-                  placeholder="e.g. pyth-price-feed, uniswap-subgraph"
-                  value={regId}
-                  onChange={(e) => setRegId(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg taste-input text-white text-xs font-mono placeholder-zinc-500"
                   required
+                  placeholder="e.g. coingecko-ping"
+                  value={formData.service_id}
+                  onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
+                  className="w-full bg-[#050505] border border-neutral-800 text-white rounded-xl px-3.5 py-2 text-xs font-mono focus:border-neutral-500 outline-none"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">Service Name</label>
+                <label className="text-xs font-mono text-neutral-400">Display Name</label>
                 <input
                   type="text"
-                  placeholder="e.g. Pyth Network Price Feed Validator"
-                  value={regName}
-                  onChange={(e) => setRegName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg taste-input text-white text-xs placeholder-zinc-500"
                   required
+                  placeholder="e.g. CoinGecko Spot Oracle Gateway"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-[#050505] border border-neutral-800 text-white rounded-xl px-3.5 py-2 text-xs focus:border-neutral-500 outline-none"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">Endpoint Target URL</label>
+                <label className="text-xs font-mono text-neutral-400">Endpoint URL (HTTP / HTTPS)</label>
                 <input
                   type="url"
-                  placeholder="https://api.example.com/v1/health"
-                  value={regEndpoint}
-                  onChange={(e) => setRegEndpoint(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg taste-input text-white text-xs font-mono placeholder-zinc-500"
                   required
+                  placeholder="https://api.coingecko.com/api/v3/ping"
+                  value={formData.endpoint_url}
+                  onChange={(e) => setFormData({ ...formData, endpoint_url: e.target.value })}
+                  className="w-full bg-[#050505] border border-neutral-800 text-white rounded-xl px-3.5 py-2 text-xs font-mono focus:border-neutral-500 outline-none"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">SLA Specification & Guarantee Criteria</label>
+                <label className="text-xs font-mono text-neutral-400">SLA Criteria Specification</label>
                 <textarea
-                  placeholder="Specify criteria for AI quality arbiter (e.g. Response code 200 with valid JSON status 'healthy', latency under 500ms)."
-                  value={regCriteria}
-                  onChange={(e) => setRegCriteria(e.target.value)}
-                  rows={3}
-                  className="w-full px-3.5 py-2 rounded-lg taste-input text-white text-xs leading-relaxed placeholder-zinc-500 resize-none"
                   required
+                  rows={3}
+                  placeholder="e.g. HTTP 200 with valid status JSON and server heartbeat ping."
+                  value={formData.sla_criteria}
+                  onChange={(e) => setFormData({ ...formData, sla_criteria: e.target.value })}
+                  className="w-full bg-[#050505] border border-neutral-800 text-white rounded-xl px-3.5 py-2 text-xs focus:border-neutral-500 outline-none resize-none leading-relaxed"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">Penalty Threshold (Consecutive Breaches)</label>
+                <label className="text-xs font-mono text-neutral-400">
+                  Penalty Threshold (Consecutive Violations)
+                </label>
                 <input
                   type="number"
-                  min="1"
-                  max="10"
-                  value={regThreshold}
-                  onChange={(e) => setRegThreshold(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg taste-input text-white text-xs font-mono placeholder-zinc-500"
+                  min={1}
+                  max={10}
                   required
+                  value={formData.penalty_threshold}
+                  onChange={(e) => setFormData({ ...formData, penalty_threshold: parseInt(e.target.value) || 3 })}
+                  className="w-full bg-[#050505] border border-neutral-800 text-white rounded-xl px-3.5 py-2 text-xs font-mono focus:border-neutral-500 outline-none"
                 />
-                <span className="text-[11px] text-zinc-500">
-                  Service is automatically flagged as Penalized upon reaching this failure count.
-                </span>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between pt-3 border-t border-neutral-900">
                 <button
                   type="button"
-                  onClick={() => setIsRegisterModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-300 font-medium text-xs transition-colors"
+                  onClick={fillSampleService}
+                  className="text-xs font-mono text-neutral-400 hover:text-white transition-colors"
                 >
-                  Cancel
+                  Fill Sample Data
                 </button>
-                {userWallet ? (
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 active:scale-[0.98] font-medium text-xs transition-colors"
-                  >
-                    Submit Registration
-                  </button>
-                ) : (
+
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={connectWallet}
-                    className="px-5 py-2 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 active:scale-[0.98] font-medium text-xs transition-colors flex items-center space-x-1.5"
+                    onClick={() => setIsRegisterOpen(false)}
+                    className="rounded-full border border-neutral-800 hover:border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors text-neutral-400 text-xs px-4 py-2 font-mono"
                   >
-                    <Wallet className="w-3.5 h-3.5" />
-                    <span>Connect Wallet to Register</span>
+                    Cancel
                   </button>
-                )}
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="rounded-full border border-neutral-700 bg-transparent hover:bg-neutral-900 transition-colors text-white text-xs px-5 py-2 flex items-center gap-2 font-mono font-medium disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Confirming in MetaMask...</span>
+                      </>
+                    ) : (
+                      <span>Sign &amp; Register</span>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Live AI Consensus Audit Overlay Modal */}
-      {activeAuditingService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-xl rounded-xl bg-zinc-950 border border-white/10 p-6 sm:p-8 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-zinc-900 border border-white/10 text-zinc-200">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-white">GenLayer AI Quality Consensus</h3>
-                  <p className="text-xs text-zinc-400">
-                    Evaluating: <span className="text-zinc-200 font-mono font-medium">{activeAuditingService.name}</span>
-                  </p>
-                </div>
-              </div>
-              {auditResult && (
-                <button
-                  onClick={() => setActiveAuditingService(null)}
-                  className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-
-            {/* Step Progress Indicators */}
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { step: 1, label: 'Web Probe' },
-                { step: 2, label: 'LLM Arbiter' },
-                { step: 3, label: 'Consensus' },
-                { step: 4, label: 'State Commit' },
-              ].map((s) => (
-                <div key={s.step} className="space-y-1.5">
-                  <div
-                    className={`h-1.5 rounded-full transition-colors duration-300 ${
-                      auditStep > s.step
-                        ? 'bg-white'
-                        : auditStep === s.step
-                        ? 'bg-zinc-400 animate-pulse'
-                        : 'bg-zinc-800'
-                    }`}
-                  />
-                  <div
-                    className={`text-[10px] font-medium text-center ${
-                      auditStep >= s.step ? 'text-zinc-200' : 'text-zinc-600'
-                    }`}
-                  >
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Terminal Console Logs */}
-            <div className="p-4 rounded-lg bg-black border border-white/10 font-mono text-xs space-y-2 max-h-48 overflow-y-auto">
-              {auditLogs.map((log, index) => (
-                <div
-                  key={index}
-                  className={`${
-                    log.includes('COMPLIANT')
-                      ? 'text-emerald-400 font-medium'
-                      : log.includes('VIOLATED')
-                      ? 'text-red-400 font-medium'
-                      : log.includes('DEGRADED')
-                      ? 'text-amber-400 font-medium'
-                      : 'text-zinc-400'
-                  }`}
-                >
-                  {log}
-                </div>
-              ))}
-              {!auditResult && (
-                <div className="flex items-center space-x-2 text-zinc-500 text-[11px] pt-1">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-zinc-400" />
-                  <span>GenVM consensus execution in progress...</span>
-                </div>
-              )}
-            </div>
-
-            {/* Final Verdict Summary */}
-            {auditResult && (
-              <div
-                className={`p-4 rounded-lg border space-y-2 animate-fade-in ${
-                  auditResult.verdict === 'COMPLIANT'
-                    ? 'bg-emerald-500/5 border-emerald-500/25 text-emerald-300'
-                    : auditResult.verdict === 'DEGRADED'
-                    ? 'bg-amber-500/5 border-amber-500/25 text-amber-300'
-                    : 'bg-red-500/5 border-red-500/25 text-red-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    {auditResult.verdict === 'COMPLIANT' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                    {auditResult.verdict === 'DEGRADED' && <AlertTriangle className="w-4 h-4 text-amber-400" />}
-                    {auditResult.verdict === 'VIOLATED' && <XCircle className="w-4 h-4 text-red-400" />}
-                    <span className="font-semibold text-sm">Verdict: {auditResult.verdict}</span>
-                  </div>
-                  <span className="font-mono text-sm font-bold text-white">Score: {auditResult.score}/100</span>
-                </div>
-                <p className="text-xs leading-relaxed opacity-90">{auditResult.summary}</p>
-              </div>
-            )}
-
-            {auditResult && (
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={() => setActiveAuditingService(null)}
-                  className="px-5 py-2 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 active:scale-[0.98] font-medium text-xs transition-colors"
-                >
-                  Close & Refresh Dashboard
-                </button>
-              </div>
-            )}
+      {/* Footer */}
+      <footer className="border-t border-neutral-900 py-8 bg-black">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-neutral-500">
+          <div>Agentic SLA Arbiter: GenLayer Intelligent Contract</div>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://genlayer.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              GenLayer Network
+            </a>
+            <span>•</span>
+            <a
+              href={EXPLORER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              Contract Explorer
+            </a>
           </div>
         </div>
-      )}
-
-      {/* JSON Viewer Modal */}
-      {selectedServiceJson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-xl bg-zinc-950 border border-white/10 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center space-x-2">
-                <Code className="w-4 h-4 text-zinc-400" />
-                <h3 className="text-sm font-semibold text-white">GenLayer Storage Record</h3>
-              </div>
-              <button
-                onClick={() => setSelectedServiceJson(null)}
-                className="text-zinc-500 hover:text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <pre className="p-4 rounded-lg bg-black border border-white/10 font-mono text-xs text-zinc-300 overflow-x-auto max-h-80">
-              {selectedServiceJson}
-            </pre>
-            <div className="flex justify-between items-center pt-2">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(selectedServiceJson);
-                  addToast('info', 'Copied', 'JSON copied to clipboard.');
-                }}
-                className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs text-zinc-300 hover:text-white flex items-center space-x-1.5 transition-colors"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>Copy JSON</span>
-              </button>
-              <button
-                onClick={() => setSelectedServiceJson(null)}
-                className="px-4 py-1.5 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200 active:scale-[0.98] font-medium text-xs transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </footer>
     </div>
   );
 }
