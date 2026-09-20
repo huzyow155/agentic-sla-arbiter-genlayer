@@ -4,6 +4,12 @@ A verifiable, decentralized Service Level Agreement (SLA) and quality arbitratio
 
 The **Agentic SLA Arbiter** enables autonomous agents, decentralized protocols, and off-chain service consumers to monitor external web services, RPC nodes, data feeds, and API endpoints against expressive natural-language SLA criteria. Using GenLayer's non-deterministic web rendering and LLM execution capabilities with semantic consensus validation, the contract produces tamper-proof on-chain audit records and automatically penalizes defaulting services.
 
+- **Live Application:** [https://agentic-sla-arbiter-genlayer.vercel.app](https://agentic-sla-arbiter-genlayer.vercel.app)
+- **GitHub Repository:** [https://github.com/huzyow155/agentic-sla-arbiter-genlayer](https://github.com/huzyow155/agentic-sla-arbiter-genlayer)
+- **Contract Address (studionet):** `0xB0Ba9C3dC6a9460667E8e29d38A9e5fbaF7D807C`
+- **GenLayer Studio Explorer:** [https://studio.genlayer.com/address/0xB0Ba9C3dC6a9460667E8e29d38A9e5fbaF7D807C](https://studio.genlayer.com/address/0xB0Ba9C3dC6a9460667E8e29d38A9e5fbaF7D807C)
+- **UI/UX Standard:** Built with [UI/UX Pro Max Skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) design guidelines (dark mode, glassmorphism, toast notifications, responsive layout).
+
 ---
 
 ## 1. System Architecture & State Design

@@ -5,15 +5,19 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
+node_modules/
+frontend/node_modules/
 
-# Testing and Coverage
+# Build artifacts and caches
 .pytest_cache/
 artifacts/
 *.log
+dist/
+frontend/dist/
 
 # Secrets and Local Configurations
-.env
-.env.*
+.env.local
+.env.*.local
 *.pem
 *.key
 *.secret
