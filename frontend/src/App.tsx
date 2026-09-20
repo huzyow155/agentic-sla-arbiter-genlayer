@@ -513,28 +513,25 @@ export default function App() {
   const consensusHealth = totalEvaluationsCount > 0 ? Math.round((compliantEvals / totalEvaluationsCount) * 100) : 100;
 
   return (
-    <div className="relative min-h-screen bg-black text-zinc-100 flex flex-col selection:bg-zinc-800 selection:text-white">
-      {/* Minimalist subtle background grid */}
-      <div className="fixed inset-0 pointer-events-none minimalist-grid opacity-25 z-0" />
-
+    <div className="relative min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-blue-600/20 selection:text-blue-700 ocean-grid">
       {/* Toast Notification Container */}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col space-y-2.5 max-w-sm pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-start gap-3 p-4 rounded-xl bg-zinc-900/95 border border-zinc-800 shadow-2xl transition-all duration-200"
+            className="pointer-events-auto flex items-start gap-3 p-4 rounded-xl bg-white border border-slate-200 shadow-xl transition-all duration-200"
           >
-            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
-            {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
-            {toast.type === 'error' && <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
-            {toast.type === 'info' && <Info className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />}
+            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />}
+            {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />}
+            {toast.type === 'error' && <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />}
+            {toast.type === 'info' && <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />}
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm text-white">{toast.title}</div>
-              <div className="text-xs text-zinc-400 leading-relaxed mt-0.5">{toast.message}</div>
+              <div className="font-semibold text-sm text-slate-900">{toast.title}</div>
+              <div className="text-xs text-slate-600 leading-relaxed mt-0.5">{toast.message}</div>
             </div>
             <button
               onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-              className="text-zinc-500 hover:text-white transition-colors"
+              className="text-slate-400 hover:text-slate-700 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -542,23 +539,23 @@ export default function App() {
         ))}
       </div>
 
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 border-b border-zinc-800/80 bg-black/85 backdrop-blur-md">
+      {/* Top Navigation Bar: Soft Ocean Blue Gradient */}
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           <div className="flex items-center space-x-3.5">
-            <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white">
-              <ShieldCheck className="w-5 h-5 text-zinc-200 stroke-[2]" />
+            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white shadow-sm">
+              <ShieldCheck className="w-6 h-6 text-white stroke-[2.2]" />
             </div>
             <div>
               <div className="flex items-center space-x-2.5">
-                <span className="font-semibold text-lg sm:text-xl tracking-tight text-white">
+                <span className="font-bold text-lg sm:text-xl tracking-tight text-white">
                   Agentic SLA Arbiter
                 </span>
-                <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
+                <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded bg-white/15 text-blue-100 border border-white/20">
                   GenVM 2.0
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 hidden sm:flex items-center space-x-1.5 mt-0.5">
+              <p className="text-xs text-blue-100/80 hidden sm:flex items-center space-x-1.5 mt-0.5">
                 <span>Autonomous Quality Consensus</span>
                 <span>&bull;</span>
                 <span>Decentralized SLA Protocol</span>
@@ -568,24 +565,24 @@ export default function App() {
 
           <div className="flex items-center space-x-2.5 sm:space-x-3">
             {/* Studionet Status Indicator */}
-            <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs">
+            <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-xs">
               <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
               </span>
-              <span className="text-zinc-300 font-medium capitalize">{NETWORK_NAME}</span>
+              <span className="text-white font-medium capitalize">{NETWORK_NAME}</span>
             </div>
 
             {/* Contract Address Indicator */}
-            <div className="hidden xl:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400">
-              <Cpu className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="text-[11px] text-zinc-500">Contract:</span>
-              <span className="text-zinc-300">{CONTRACT_ADDRESS.substring(0, 6)}...{CONTRACT_ADDRESS.substring(CONTRACT_ADDRESS.length - 4)}</span>
+            <div className="hidden xl:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-xs font-mono text-blue-100">
+              <Cpu className="w-3.5 h-3.5 text-blue-200" />
+              <span className="text-[11px] text-blue-200/80">Contract:</span>
+              <span className="text-white font-medium">{CONTRACT_ADDRESS.substring(0, 6)}...{CONTRACT_ADDRESS.substring(CONTRACT_ADDRESS.length - 4)}</span>
               <button
                 onClick={() => copyToClipboard(CONTRACT_ADDRESS)}
                 title="Copy contract address"
                 className="hover:text-white transition-colors"
               >
-                {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-zinc-500" />}
+                {copiedAddress ? <Check className="w-3 h-3 text-emerald-300" /> : <Copy className="w-3 h-3 text-blue-200" />}
               </button>
             </div>
 
@@ -594,10 +591,10 @@ export default function App() {
               href={EXPLORER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+              className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-medium text-white transition-colors"
             >
               <span>Explorer</span>
-              <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+              <ExternalLink className="w-3.5 h-3.5 text-blue-200" />
             </a>
 
             {/* CONNECT WALLET BUTTON */}
@@ -605,26 +602,26 @@ export default function App() {
               <button
                 onClick={connectWallet}
                 disabled={isConnectingWallet}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white text-black hover:bg-zinc-200 transition-colors font-semibold text-xs disabled:opacity-50"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white text-blue-700 hover:bg-blue-50 font-semibold text-xs shadow transition-all disabled:opacity-50"
               >
                 {isConnectingWallet ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-black" />
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-700" />
                 ) : (
-                  <Wallet className="w-3.5 h-3.5 stroke-[2]" />
+                  <Wallet className="w-3.5 h-3.5 stroke-[2.2]" />
                 )}
                 <span>{isConnectingWallet ? 'Connecting...' : 'Connect Wallet'}</span>
               </button>
             ) : (
               <div className="flex items-center space-x-1.5">
-                <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-200 font-mono text-xs font-medium">
+                <div className="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-white/15 border border-white/25 text-white font-mono text-xs font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  <Wallet className="w-3.5 h-3.5 text-zinc-400" />
+                  <Wallet className="w-3.5 h-3.5 text-blue-200" />
                   <span>{userWallet.substring(0, 6)}...{userWallet.substring(userWallet.length - 4)}</span>
                 </div>
                 <button
                   onClick={disconnectWallet}
                   title="Disconnect wallet"
-                  className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-blue-100 hover:text-white transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
@@ -641,9 +638,9 @@ export default function App() {
                 }
                 setIsRegisterModalOpen(true);
               }}
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-medium text-xs transition-colors"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-white font-semibold text-xs border border-white/20 shadow-sm transition-colors"
             >
-              <Plus className="w-3.5 h-3.5 text-zinc-300" />
+              <Plus className="w-3.5 h-3.5 text-white" />
               <span>Register SLA</span>
             </button>
           </div>
@@ -651,21 +648,21 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-9">
         {/* Hero Section */}
-        <section className="rounded-2xl bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 p-6 sm:p-10 shadow-sm">
+        <section className="rounded-2xl bg-white border border-slate-200 p-6 sm:p-10 shadow-sm">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
             <div className="space-y-4 max-w-2xl">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
                 <span>Decentralized AI Quality Arbiter</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
-                Autonomous Quality Arbiter for Web3 Infrastructure
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                Autonomous Quality Arbiter for <span className="text-blue-600">Web3 Infrastructure</span>
               </h1>
 
-              <p className="text-sm sm:text-base text-zinc-400 leading-relaxed font-normal">
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
                 Execute verifiable quality audits over web endpoints and oracle feeds using GenLayer intelligent contracts.
                 Leader and validator nodes probe target endpoints, execute LLM evaluation prompts, achieve semantic agreement,
                 and enforce automated on-chain penalty slashing upon consecutive SLA breaches.
@@ -675,7 +672,7 @@ export default function App() {
                 {!userWallet ? (
                   <button
                     onClick={connectWallet}
-                    className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-200 font-semibold text-xs transition-colors flex items-center space-x-2"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm hover:shadow transition-all flex items-center space-x-2"
                   >
                     <Wallet className="w-4 h-4" />
                     <span>Connect Wallet to Get Started</span>
@@ -683,7 +680,7 @@ export default function App() {
                 ) : (
                   <button
                     onClick={() => setIsRegisterModalOpen(true)}
-                    className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-200 font-semibold text-xs transition-colors flex items-center space-x-2"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm hover:shadow transition-all flex items-center space-x-2"
                   >
                     <span>Register New Service</span>
                     <ChevronRight className="w-4 h-4" />
@@ -691,7 +688,7 @@ export default function App() {
                 )}
                 <a
                   href="#services-section"
-                  className="px-5 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white font-medium text-xs transition-colors"
+                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs border border-slate-200 transition-colors"
                 >
                   Explore Monitored Services
                 </a>
@@ -700,42 +697,42 @@ export default function App() {
 
             {/* Metrics Dashboard Grid */}
             <div className="grid grid-cols-2 gap-3 w-full lg:w-auto shrink-0">
-              <div className="p-4 sm:p-5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
-                <div className="flex items-center space-x-2 text-zinc-500 text-xs font-medium">
-                  <Server className="w-3.5 h-3.5 text-zinc-400" />
+              <div className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div className="flex items-center space-x-2 text-slate-500 text-xs font-medium">
+                  <Server className="w-3.5 h-3.5 text-blue-600" />
                   <span>Total Monitored</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-white font-mono">{totalServices}</div>
-                <div className="text-[11px] text-zinc-400 font-normal">{activeServices} active on-chain</div>
+                <div className="text-2xl sm:text-3xl font-bold text-slate-900 font-mono">{totalServices}</div>
+                <div className="text-[11px] text-emerald-600 font-medium">{activeServices} active on-chain</div>
               </div>
 
-              <div className="p-4 sm:p-5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
-                <div className="flex items-center space-x-2 text-zinc-500 text-xs font-medium">
-                  <Activity className="w-3.5 h-3.5 text-zinc-400" />
+              <div className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div className="flex items-center space-x-2 text-slate-500 text-xs font-medium">
+                  <Activity className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Audits Logged</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-white font-mono">{totalEvaluationsCount}</div>
-                <div className="text-[11px] text-zinc-400">Verifiable receipts</div>
+                <div className="text-2xl sm:text-3xl font-bold text-slate-900 font-mono">{totalEvaluationsCount}</div>
+                <div className="text-[11px] text-slate-500">Verifiable receipts</div>
               </div>
 
-              <div className="p-4 sm:p-5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
-                <div className="flex items-center space-x-2 text-zinc-500 text-xs font-medium">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div className="flex items-center space-x-2 text-slate-500 text-xs font-medium">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Consensus Rate</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-emerald-400 font-mono">{consensusHealth}%</div>
-                <div className="text-[11px] text-zinc-400">Semantic consensus</div>
+                <div className="text-2xl sm:text-3xl font-bold text-emerald-600 font-mono">{consensusHealth}%</div>
+                <div className="text-[11px] text-slate-500">Semantic consensus</div>
               </div>
 
-              <div className="p-4 sm:p-5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1">
-                <div className="flex items-center space-x-2 text-zinc-500 text-xs font-medium">
-                  <Lock className="w-3.5 h-3.5 text-zinc-400" />
+              <div className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div className="flex items-center space-x-2 text-slate-500 text-xs font-medium">
+                  <Lock className="w-3.5 h-3.5 text-amber-600" />
                   <span>Slashing State</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-white font-mono">
+                <div className="text-2xl sm:text-3xl font-bold text-slate-900 font-mono">
                   {services.filter((s) => !s.is_active).length}
                 </div>
-                <div className="text-[11px] text-zinc-500 font-normal">Auto-deactivated</div>
+                <div className="text-[11px] text-red-600 font-medium">Auto-deactivated</div>
               </div>
             </div>
           </div>
@@ -745,11 +742,11 @@ export default function App() {
         <section id="services-section" className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center space-x-2">
-                <BarChart3 className="w-5 h-5 text-zinc-400" />
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center space-x-2">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
                 <span>Monitored Web Services & Feeds</span>
               </h2>
-              <p className="text-xs sm:text-sm text-zinc-500 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Inspect registered endpoints, trigger AI evaluations, and verify on-chain quality scores.
               </p>
             </div>
@@ -757,26 +754,26 @@ export default function App() {
             <div className="flex flex-wrap items-center gap-2.5">
               {/* Search Box */}
               <div className="relative min-w-[240px]">
-                <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Search by ID, name, or URL..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 focus:border-zinc-600 text-xs text-white placeholder-zinc-500 outline-none transition-colors"
+                  className="w-full pl-8 pr-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-blue-600 text-xs text-slate-900 placeholder-slate-400 outline-none shadow-sm transition-colors"
                 />
               </div>
 
               {/* Status Filter Tabs */}
-              <div className="flex items-center p-1 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-400">
+              <div className="flex items-center p-1 rounded-xl bg-white border border-slate-200 text-xs font-medium text-slate-600 shadow-sm">
                 {(['ALL', 'ACTIVE', 'PENALIZED', 'COMPLIANT', 'VIOLATED'] as const).map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setStatusFilter(filter)}
-                    className={`px-3 py-1 rounded-md transition-colors capitalize ${
+                    className={`px-3 py-1.5 rounded-lg transition-colors capitalize ${
                       statusFilter === filter
-                        ? 'bg-white text-black font-semibold'
-                        : 'hover:text-white'
+                        ? 'bg-blue-600 text-white font-semibold shadow-sm'
+                        : 'hover:text-slate-900'
                     }`}
                   >
                     {filter.toLowerCase()}
@@ -798,7 +795,7 @@ export default function App() {
               return (
                 <div
                   key={service.service_id}
-                  className="rounded-xl bg-zinc-900/40 backdrop-blur-md border border-zinc-800 hover:border-zinc-700 p-5 flex flex-col justify-between space-y-4 transition-colors"
+                  className="rounded-xl bg-white border border-slate-200 hover:border-blue-300 p-6 flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <div className="space-y-3.5">
                     {/* Card Top Row */}
@@ -810,40 +807,40 @@ export default function App() {
                               isPenalized
                                 ? 'bg-red-500'
                                 : service.last_verdict === 'COMPLIANT'
-                                ? 'bg-emerald-400'
+                                ? 'bg-emerald-500'
                                 : service.last_verdict === 'DEGRADED'
-                                ? 'bg-amber-400'
-                                : 'bg-zinc-600'
+                                ? 'bg-amber-500'
+                                : 'bg-slate-400'
                             }`}
                           />
-                          <span className="font-mono text-[11px] text-zinc-400 font-medium uppercase tracking-wider">
+                          <span className="font-mono text-[11px] text-blue-600 font-semibold uppercase tracking-wider">
                             {service.service_id}
                           </span>
                         </div>
-                        <h3 className="font-semibold text-white text-base mt-1 leading-snug">
+                        <h3 className="font-bold text-slate-900 text-base mt-1 leading-snug">
                           {service.name}
                         </h3>
                       </div>
 
                       <div className="flex flex-col items-end space-y-1.5 shrink-0">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                             isPenalized
-                              ? 'badge-penalized'
+                              ? 'bg-slate-100 text-slate-600 border border-slate-300'
                               : service.last_verdict === 'COMPLIANT'
-                              ? 'badge-compliant'
+                              ? 'bg-green-100 text-green-700 border border-green-200'
                               : service.last_verdict === 'DEGRADED'
-                              ? 'badge-degraded'
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                               : service.last_verdict === 'VIOLATED'
-                              ? 'badge-violated'
-                              : 'bg-zinc-900 text-zinc-500 border border-zinc-800'
+                              ? 'bg-red-100 text-red-700 border border-red-200'
+                              : 'bg-slate-100 text-slate-500 border border-slate-200'
                           }`}
                         >
                           {isPenalized ? 'PENALIZED' : service.last_verdict}
                         </span>
                         <button
                           onClick={() => setSelectedServiceJson(JSON.stringify(service, null, 2))}
-                          className="text-[11px] text-zinc-500 hover:text-zinc-300 flex items-center space-x-1 transition-colors"
+                          className="text-[11px] text-slate-500 hover:text-blue-600 flex items-center space-x-1 transition-colors"
                           title="View on-chain JSON"
                         >
                           <Code className="w-3 h-3" />
@@ -853,82 +850,82 @@ export default function App() {
                     </div>
 
                     {/* Endpoint Target URL */}
-                    <div className="p-2.5 rounded-lg bg-black/60 border border-zinc-800/80 space-y-1">
-                      <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
+                      <div className="flex items-center justify-between text-[10px] text-slate-500">
                         <span className="flex items-center space-x-1">
-                          <Globe className="w-3 h-3 text-zinc-400" />
+                          <Globe className="w-3 h-3 text-blue-600" />
                           <span>Endpoint Target</span>
                         </span>
                         <a
                           href={service.endpoint_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="hover:text-white flex items-center space-x-0.5 transition-colors"
+                          className="hover:text-blue-600 flex items-center space-x-0.5 transition-colors"
                         >
                           <span>Open</span>
                           <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       </div>
-                      <div className="text-xs font-mono text-zinc-300 truncate" title={service.endpoint_url}>
+                      <div className="text-xs font-mono text-slate-800 truncate font-medium" title={service.endpoint_url}>
                         {service.endpoint_url}
                       </div>
                     </div>
 
                     {/* SLA Criteria */}
                     <div className="space-y-1">
-                      <div className="text-[11px] text-zinc-500 font-medium">SLA Specification:</div>
-                      <p className="text-xs text-zinc-400 bg-zinc-950/40 p-2.5 rounded-lg border border-zinc-850 line-clamp-2 leading-relaxed">
+                      <div className="text-[11px] text-slate-500 font-medium">SLA Specification:</div>
+                      <p className="text-xs text-slate-600 bg-slate-50/70 p-3 rounded-lg border border-slate-200 line-clamp-2 leading-relaxed">
                         {service.sla_criteria}
                       </p>
                     </div>
 
                     {/* Provider Info */}
-                    <div className="text-[10px] text-zinc-500 flex items-center justify-between px-0.5">
+                    <div className="text-[10px] text-slate-500 flex items-center justify-between px-0.5">
                       <span>Provider:</span>
-                      <span className="font-mono text-zinc-400">
+                      <span className="font-mono text-slate-700">
                         {service.provider.substring(0, 6)}...{service.provider.substring(service.provider.length - 4)}
                       </span>
                     </div>
 
                     {/* Scores & Violations */}
                     <div className="grid grid-cols-2 gap-2 pt-0.5">
-                      <div className="p-2.5 rounded-lg bg-zinc-950/40 border border-zinc-800/60">
-                        <div className="text-[10px] text-zinc-500 font-medium">Quality Score</div>
-                        <div className="text-lg font-bold font-mono text-white flex items-baseline space-x-1 mt-0.5">
+                      <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                        <div className="text-[10px] text-slate-500 font-medium">Quality Score</div>
+                        <div className="text-lg font-bold font-mono text-slate-900 flex items-baseline space-x-1 mt-0.5">
                           <span>{service.last_score}</span>
-                          <span className="text-xs font-normal text-zinc-600">/ 100</span>
+                          <span className="text-xs font-normal text-slate-500">/ 100</span>
                         </div>
                       </div>
 
-                      <div className="p-2.5 rounded-lg bg-zinc-950/40 border border-zinc-800/60">
-                        <div className="text-[10px] text-zinc-500 font-medium">Consecutive Violations</div>
+                      <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                        <div className="text-[10px] text-slate-500 font-medium">Consecutive Violations</div>
                         <div className="text-lg font-bold font-mono flex items-baseline space-x-1 mt-0.5">
                           <span
                             className={
                               service.consecutive_violations >= service.penalty_threshold
-                                ? 'text-red-400'
+                                ? 'text-red-600'
                                 : service.consecutive_violations > 0
-                                ? 'text-amber-400'
-                                : 'text-zinc-400'
+                                ? 'text-amber-600'
+                                : 'text-slate-700'
                             }
                           >
                             {service.consecutive_violations}
                           </span>
-                          <span className="text-xs font-normal text-zinc-600">/ {service.penalty_threshold} max</span>
+                          <span className="text-xs font-normal text-slate-400">/ {service.penalty_threshold} max</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Metrics Bar */}
                     <div className="space-y-1.5">
-                      <div className="flex justify-between text-[11px] text-zinc-500">
+                      <div className="flex justify-between text-[11px] text-slate-500">
                         <span>Compliance Rate</span>
-                        <span className="font-mono text-zinc-300">{compliantRate}% ({service.compliant_count}/{service.total_evaluations})</span>
+                        <span className="font-mono text-slate-800 font-medium">{compliantRate}% ({service.compliant_count}/{service.total_evaluations})</span>
                       </div>
-                      <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-300 ${
-                            isPenalized ? 'bg-red-500' : 'bg-zinc-200'
+                            isPenalized ? 'bg-red-500' : 'bg-blue-600'
                           }`}
                           style={{ width: `${service.total_evaluations > 0 ? compliantRate : 100}%` }}
                         />
@@ -937,25 +934,25 @@ export default function App() {
                   </div>
 
                   {/* Card Action Button */}
-                  <div className="pt-2 border-t border-zinc-800">
+                  <div className="pt-2 border-t border-slate-100">
                     {isPenalized ? (
-                      <div className="w-full py-2 px-3 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-medium flex items-center justify-center space-x-2">
-                        <AlertTriangle className="w-3.5 h-3.5 text-zinc-500" />
+                      <div className="w-full py-2.5 px-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-semibold flex items-center justify-center space-x-2">
+                        <AlertTriangle className="w-4 h-4 text-slate-500" />
                         <span>SLA Breached & Deactivated</span>
                       </div>
                     ) : (
                       <button
                         onClick={() => startLiveEvaluation(service)}
-                        className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-zinc-200 hover:text-white font-medium text-xs transition-colors flex items-center justify-center space-x-2"
+                        className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm hover:shadow transition-all flex items-center justify-center space-x-2 active:scale-98"
                       >
                         {userWallet ? (
                           <>
-                            <Zap className="w-3.5 h-3.5 text-zinc-400" />
+                            <Zap className="w-3.5 h-3.5 text-white" />
                             <span>Trigger AI Audit (gl.evaluate_service)</span>
                           </>
                         ) : (
                           <>
-                            <Wallet className="w-3.5 h-3.5 text-zinc-400" />
+                            <Wallet className="w-3.5 h-3.5 text-white" />
                             <span>Connect Wallet to Audit</span>
                           </>
                         )}
@@ -972,23 +969,23 @@ export default function App() {
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center space-x-2">
-                <Terminal className="w-5 h-5 text-zinc-400" />
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center space-x-2">
+                <Terminal className="w-5 h-5 text-blue-600" />
                 <span>On-Chain Quality Audit Records</span>
               </h2>
-              <p className="text-xs sm:text-sm text-zinc-500 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Immutable arbitration receipts committed by GenLayer consensus nodes with AI reasoning logs.
               </p>
             </div>
-            <span className="text-xs font-mono text-zinc-400 px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800">
+            <span className="text-xs font-mono text-slate-600 px-3 py-1 rounded-lg bg-white border border-slate-200 shadow-sm">
               Total Audits: {evaluations.length}
             </span>
           </div>
 
-          <div className="rounded-xl bg-zinc-900/40 backdrop-blur-md overflow-hidden border border-zinc-800">
+          <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-900/90 border-b border-zinc-800 text-zinc-400 uppercase tracking-wider text-[10px]">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="py-3 px-4 font-semibold">Audit ID</th>
                     <th className="py-3 px-4 font-semibold">Service ID</th>
@@ -999,39 +996,39 @@ export default function App() {
                     <th className="py-3 px-4 font-semibold">Timestamp</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-850 text-zinc-300">
+                <tbody className="divide-y divide-slate-100 text-slate-700">
                   {evaluations.map((item) => (
-                    <tr key={item.evaluation_id} className="hover:bg-zinc-900/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-medium text-zinc-300">
+                    <tr key={item.evaluation_id} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-blue-600">
                         #{item.evaluation_id}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-white font-medium">
+                      <td className="py-3.5 px-4 font-mono text-slate-900 font-semibold">
                         {item.service_id}
                       </td>
                       <td className="py-3.5 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                             item.verdict === 'COMPLIANT'
-                              ? 'badge-compliant'
+                              ? 'bg-green-100 text-green-700 border border-green-200'
                               : item.verdict === 'DEGRADED'
-                              ? 'badge-degraded'
-                              : 'badge-violated'
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                              : 'bg-red-100 text-red-700 border border-red-200'
                           }`}
                         >
                           {item.verdict}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-white font-semibold">
+                      <td className="py-3.5 px-4 font-mono text-slate-900 font-bold">
                         <span>{item.score}</span>
-                        <span className="text-zinc-600 font-normal">/100</span>
+                        <span className="text-slate-400 font-normal">/100</span>
                       </td>
-                      <td className="py-3.5 px-4 max-w-md text-zinc-400 leading-relaxed font-normal">
+                      <td className="py-3.5 px-4 max-w-md text-slate-600 leading-relaxed font-normal">
                         {item.summary}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-zinc-500 text-[11px]">
+                      <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
                         {item.evaluator.substring(0, 6)}...{item.evaluator.substring(item.evaluator.length - 4)}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-zinc-500 text-[11px] whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px] whitespace-nowrap">
                         {item.timestamp}
                       </td>
                     </tr>
@@ -1044,10 +1041,10 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-zinc-800/80 bg-black py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
+      <footer className="relative z-10 border-t border-slate-200 bg-white py-8 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center space-x-2">
-            <ShieldCheck className="w-4 h-4 text-zinc-400" />
+            <ShieldCheck className="w-4 h-4 text-blue-600" />
             <span>Agentic SLA Arbiter &copy; 2026 GenLayer Ecosystem. All rights reserved.</span>
           </div>
           <div className="flex items-center space-x-4">
@@ -1055,7 +1052,7 @@ export default function App() {
               href="https://github.com/nextlevelbuilder/ui-ux-pro-max-skill"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-zinc-300 transition-colors"
+              className="hover:text-blue-600 transition-colors"
             >
               UI/UX Pro Max Standard
             </a>
@@ -1064,35 +1061,35 @@ export default function App() {
               href={EXPLORER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-zinc-300 transition-colors"
+              className="hover:text-blue-600 transition-colors"
             >
               Studionet Explorer
             </a>
             <span>&bull;</span>
-            <span className="font-mono text-zinc-500" title={`RPC URL: ${RPC_URL}`}>RPC: {RPC_URL.replace('https://', '')}</span>
+            <span className="font-mono text-slate-500" title={`RPC URL: ${RPC_URL}`}>RPC: {RPC_URL.replace('https://', '')}</span>
             <span>&bull;</span>
-            <span className="font-mono text-zinc-600">{CONTRACT_ADDRESS.substring(0, 10)}...</span>
+            <span className="font-mono text-slate-500">{CONTRACT_ADDRESS.substring(0, 10)}...</span>
           </div>
         </div>
       </footer>
 
       {/* Registration Modal */}
       {isRegisterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-xl bg-zinc-950 border border-zinc-800 p-6 sm:p-7 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white border border-slate-200 p-6 sm:p-7 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div className="flex items-center space-x-2.5">
-                <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-200">
+                <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-600">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Register Service for SLA Monitoring</h3>
-                  <p className="text-xs text-zinc-400">Deploy a verifiable quality guarantee on GenLayer.</p>
+                  <h3 className="text-base font-bold text-slate-900">Register Service for SLA Monitoring</h3>
+                  <p className="text-xs text-slate-500">Deploy a verifiable quality guarantee on GenLayer.</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsRegisterModalOpen(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1100,23 +1097,23 @@ export default function App() {
 
             <form onSubmit={handleRegister} className="space-y-4 text-xs">
               {/* Connected Wallet Banner inside Form */}
-              <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between">
                 <div className="flex items-center space-x-2 text-xs">
-                  <Wallet className="w-4 h-4 text-zinc-400" />
-                  <span className="text-zinc-400">Signing Account:</span>
-                  <span className="font-mono text-white font-medium">
+                  <Wallet className="w-4 h-4 text-blue-600" />
+                  <span className="text-slate-600">Signing Account:</span>
+                  <span className="font-mono text-slate-900 font-semibold">
                     {userWallet ? `${userWallet.substring(0, 6)}...${userWallet.substring(userWallet.length - 4)}` : 'Not Connected'}
                   </span>
                 </div>
                 {userWallet ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold border border-emerald-200">
                     Authenticated
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={connectWallet}
-                    className="text-[10px] px-2.5 py-1 rounded bg-white text-black font-semibold hover:bg-zinc-200 transition-colors"
+                    className="text-[10px] px-2.5 py-1 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
                   >
                     Connect
                   </button>
@@ -1124,81 +1121,81 @@ export default function App() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">Service Identifier (Unique Key)</label>
+                <label className="font-medium text-slate-700">Service Identifier (Unique Key)</label>
                 <input
                   type="text"
                   placeholder="e.g. pyth-price-feed, uniswap-subgraph"
                   value={regId}
                   onChange={(e) => setRegId(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg titanium-input text-white text-xs font-mono placeholder-zinc-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl ocean-input text-slate-900 text-xs font-mono placeholder-slate-400"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">Service Name</label>
+                <label className="font-medium text-slate-700">Service Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Pyth Network Price Feed Validator"
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg titanium-input text-white text-xs placeholder-zinc-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl ocean-input text-slate-900 text-xs placeholder-slate-400"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">Endpoint Target URL</label>
+                <label className="font-medium text-slate-700">Endpoint Target URL</label>
                 <input
                   type="url"
                   placeholder="https://api.example.com/v1/health"
                   value={regEndpoint}
                   onChange={(e) => setRegEndpoint(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg titanium-input text-white text-xs font-mono placeholder-zinc-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl ocean-input text-slate-900 text-xs font-mono placeholder-slate-400"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">SLA Specification & Guarantee Criteria</label>
+                <label className="font-medium text-slate-700">SLA Specification & Guarantee Criteria</label>
                 <textarea
                   placeholder="Specify criteria for AI quality arbiter (e.g. Response code 200 with valid JSON status 'healthy', latency under 500ms)."
                   value={regCriteria}
                   onChange={(e) => setRegCriteria(e.target.value)}
                   rows={3}
-                  className="w-full px-3.5 py-2 rounded-lg titanium-input text-white text-xs leading-relaxed placeholder-zinc-500 resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl ocean-input text-slate-900 text-xs leading-relaxed placeholder-slate-400 resize-none"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-zinc-300">Penalty Threshold (Consecutive Violations)</label>
+                <label className="font-medium text-slate-700">Penalty Threshold (Consecutive Violations)</label>
                 <input
                   type="number"
                   min="1"
                   max="10"
                   value={regThreshold}
                   onChange={(e) => setRegThreshold(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-lg titanium-input text-white text-xs font-mono placeholder-zinc-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl ocean-input text-slate-900 text-xs font-mono placeholder-slate-400"
                   required
                 />
-                <span className="text-[11px] text-zinc-500">
+                <span className="text-[11px] text-slate-500">
                   Service is automatically flagged as Penalized upon reaching this failure count.
                 </span>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-zinc-800">
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsRegisterModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-medium text-xs transition-colors"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition-colors"
                 >
                   Cancel
                 </button>
                 {userWallet ? (
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-lg bg-white text-black hover:bg-zinc-200 font-semibold text-xs transition-colors"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow transition-colors"
                   >
                     Submit Registration
                   </button>
@@ -1206,7 +1203,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={connectWallet}
-                    className="px-5 py-2 rounded-lg bg-white text-black hover:bg-zinc-200 font-semibold text-xs transition-colors flex items-center space-x-1.5"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow transition-colors flex items-center space-x-1.5"
                   >
                     <Wallet className="w-3.5 h-3.5" />
                     <span>Connect Wallet to Register</span>
@@ -1220,24 +1217,24 @@ export default function App() {
 
       {/* Live AI Consensus Audit Overlay Modal */}
       {activeAuditingService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-xl rounded-xl bg-zinc-950 border border-zinc-800 p-6 sm:p-8 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-xl rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-200">
-                  <Cpu className="w-5 h-5" />
+                <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-600">
+                  <Cpu className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">GenLayer AI Quality Consensus</h3>
-                  <p className="text-xs text-zinc-400">
-                    Evaluating: <span className="text-zinc-200 font-mono font-medium">{activeAuditingService.name}</span>
+                  <h3 className="text-base font-bold text-slate-900">GenLayer AI Quality Consensus</h3>
+                  <p className="text-xs text-slate-500">
+                    Evaluating: <span className="text-blue-700 font-semibold">{activeAuditingService.name}</span>
                   </p>
                 </div>
               </div>
               {auditResult && (
                 <button
                   onClick={() => setActiveAuditingService(null)}
-                  className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1254,17 +1251,17 @@ export default function App() {
               ].map((s) => (
                 <div key={s.step} className="space-y-1.5">
                   <div
-                    className={`h-1.5 rounded-full transition-colors duration-300 ${
+                    className={`h-2 rounded-full transition-colors duration-300 ${
                       auditStep > s.step
-                        ? 'bg-white'
+                        ? 'bg-emerald-500'
                         : auditStep === s.step
-                        ? 'bg-zinc-400 animate-pulse'
-                        : 'bg-zinc-800'
+                        ? 'bg-blue-600 animate-pulse'
+                        : 'bg-slate-200'
                     }`}
                   />
                   <div
-                    className={`text-[10px] font-medium text-center ${
-                      auditStep >= s.step ? 'text-zinc-200' : 'text-zinc-600'
+                    className={`text-[10px] font-semibold text-center ${
+                      auditStep >= s.step ? 'text-blue-700' : 'text-slate-400'
                     }`}
                   >
                     {s.label}
@@ -1274,7 +1271,7 @@ export default function App() {
             </div>
 
             {/* Terminal Console Logs */}
-            <div className="p-4 rounded-lg bg-black border border-zinc-800 font-mono text-xs space-y-2 max-h-48 overflow-y-auto">
+            <div className="p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs space-y-2 max-h-48 overflow-y-auto">
               {auditLogs.map((log, index) => (
                 <div
                   key={index}
@@ -1285,15 +1282,15 @@ export default function App() {
                       ? 'text-red-400 font-medium'
                       : log.includes('DEGRADED')
                       ? 'text-amber-400 font-medium'
-                      : 'text-zinc-400'
+                      : 'text-slate-300'
                   }`}
                 >
                   {log}
                 </div>
               ))}
               {!auditResult && (
-                <div className="flex items-center space-x-2 text-zinc-500 text-[11px] pt-1">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-zinc-400" />
+                <div className="flex items-center space-x-2 text-slate-400 text-[11px] pt-1">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
                   <span>GenVM consensus execution in progress...</span>
                 </div>
               )}
@@ -1302,24 +1299,24 @@ export default function App() {
             {/* Final Verdict Summary */}
             {auditResult && (
               <div
-                className={`p-4 rounded-lg border space-y-2 animate-fade-in ${
+                className={`p-4 rounded-xl border space-y-2 animate-fade-in ${
                   auditResult.verdict === 'COMPLIANT'
-                    ? 'bg-emerald-500/5 border-emerald-500/25 text-emerald-300'
+                    ? 'bg-green-50 border-green-200 text-green-800'
                     : auditResult.verdict === 'DEGRADED'
-                    ? 'bg-amber-500/5 border-amber-500/25 text-amber-300'
-                    : 'bg-red-500/5 border-red-500/25 text-red-300'
+                    ? 'bg-amber-50 border-amber-200 text-amber-800'
+                    : 'bg-red-50 border-red-200 text-red-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    {auditResult.verdict === 'COMPLIANT' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                    {auditResult.verdict === 'DEGRADED' && <AlertTriangle className="w-4 h-4 text-amber-400" />}
-                    {auditResult.verdict === 'VIOLATED' && <XCircle className="w-4 h-4 text-red-400" />}
-                    <span className="font-semibold text-sm">Verdict: {auditResult.verdict}</span>
+                    {auditResult.verdict === 'COMPLIANT' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                    {auditResult.verdict === 'DEGRADED' && <AlertTriangle className="w-5 h-5 text-amber-600" />}
+                    {auditResult.verdict === 'VIOLATED' && <XCircle className="w-5 h-5 text-red-600" />}
+                    <span className="font-bold text-sm">Verdict: {auditResult.verdict}</span>
                   </div>
-                  <span className="font-mono text-sm font-bold text-white">Score: {auditResult.score}/100</span>
+                  <span className="font-mono text-sm font-bold">Score: {auditResult.score}/100</span>
                 </div>
-                <p className="text-xs leading-relaxed opacity-90">{auditResult.summary}</p>
+                <p className="text-xs leading-relaxed">{auditResult.summary}</p>
               </div>
             )}
 
@@ -1327,7 +1324,7 @@ export default function App() {
               <div className="flex justify-end pt-2">
                 <button
                   onClick={() => setActiveAuditingService(null)}
-                  className="px-5 py-2 rounded-lg bg-white text-black hover:bg-zinc-200 font-semibold text-xs transition-colors"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow transition-colors"
                 >
                   Close & Refresh Dashboard
                 </button>
@@ -1339,21 +1336,21 @@ export default function App() {
 
       {/* JSON Viewer Modal */}
       {selectedServiceJson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-xl bg-zinc-950 border border-zinc-800 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white border border-slate-200 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center space-x-2">
-                <Code className="w-4 h-4 text-zinc-400" />
-                <h3 className="text-sm font-bold text-white">GenLayer Storage Record</h3>
+                <Code className="w-5 h-5 text-blue-600" />
+                <h3 className="text-sm font-bold text-slate-900">GenLayer Storage Record</h3>
               </div>
               <button
                 onClick={() => setSelectedServiceJson(null)}
-                className="text-zinc-500 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-slate-700 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <pre className="p-4 rounded-lg bg-black border border-zinc-800 font-mono text-xs text-zinc-300 overflow-x-auto max-h-80">
+            <pre className="p-4 rounded-xl bg-slate-900 text-blue-200 font-mono text-xs overflow-x-auto max-h-80">
               {selectedServiceJson}
             </pre>
             <div className="flex justify-between items-center pt-2">
@@ -1362,14 +1359,14 @@ export default function App() {
                   navigator.clipboard.writeText(selectedServiceJson);
                   addToast('info', 'Copied', 'JSON copied to clipboard.');
                 }}
-                className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-zinc-300 hover:text-white flex items-center space-x-1.5 transition-colors"
+                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs text-slate-700 font-medium flex items-center space-x-1.5 transition-colors"
               >
-                <Copy className="w-3.5 h-3.5" />
+                <Copy className="w-3.5 h-3.5 text-slate-500" />
                 <span>Copy JSON</span>
               </button>
               <button
                 onClick={() => setSelectedServiceJson(null)}
-                className="px-4 py-1.5 rounded-lg bg-white text-black hover:bg-zinc-200 font-medium text-xs transition-colors"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors"
               >
                 Done
               </button>
