@@ -23,8 +23,21 @@ import {
   TrendingUp,
   Info,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Wallet,
+  LogOut
 } from 'lucide-react';
+
+declare global {
+  interface Window {
+    ethereum?: {
+      isMetaMask?: boolean;
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on?: (eventName: string, handler: (...args: unknown[]) => void) => void;
+      removeListener?: (eventName: string, handler: (...args: unknown[]) => void) => void;
+    };
+  }
+}
 
 interface ServiceSLA {
   service_id: string;
@@ -69,7 +82,7 @@ const INITIAL_SERVICES: ServiceSLA[] = [
   {
     service_id: 'coingecko-feed-v3',
     name: 'CoinGecko Spot Oracle Gateway',
-    provider: '0x71c...a49b',
+    provider: '0x71cb29a49b6f8490e5183ef9b736480b91d2a49b',
     endpoint_url: 'https://api.coingecko.com/api/v3/ping',
     sla_criteria: 'HTTP 200 with valid status JSON and latency under 450ms. Must include server heartbeat.',
     total_evaluations: 24,
@@ -85,7 +98,7 @@ const INITIAL_SERVICES: ServiceSLA[] = [
   {
     service_id: 'solana-rpc-cluster',
     name: 'Solana High-Throughput RPC Endpoint',
-    provider: '0x992...32ec',
+    provider: '0x99283748293740238491823902349023490232ec',
     endpoint_url: 'https://api.mainnet-beta.solana.com',
     sla_criteria: 'Responds to getHealth JSON-RPC call within 500ms with "ok" status. Zero socket drops.',
     total_evaluations: 38,
@@ -101,7 +114,7 @@ const INITIAL_SERVICES: ServiceSLA[] = [
   {
     service_id: 'ethereum-sepolia-gateway',
     name: 'Ethereum Sepolia Public Gateway',
-    provider: '0x342...9901',
+    provider: '0x3429384029482039482039482039482039489901',
     endpoint_url: 'https://rpc.sepolia.org',
     sla_criteria: 'Block sync state valid with latency under 800ms and response to eth_blockNumber.',
     total_evaluations: 17,
@@ -117,7 +130,7 @@ const INITIAL_SERVICES: ServiceSLA[] = [
   {
     service_id: 'arweave-gateway-decentralized',
     name: 'Arweave Permanent Storage Gateway',
-    provider: '0x551...bb89',
+    provider: '0x551928472938472938472938472938472938bb89',
     endpoint_url: 'https://arweave.net/info',
     sla_criteria: 'Valid network info JSON with network block height advancing and peers >= 10.',
     total_evaluations: 42,
@@ -133,7 +146,7 @@ const INITIAL_SERVICES: ServiceSLA[] = [
   {
     service_id: 'legacy-bridge-relayer',
     name: 'Cross-Chain Teleport Bridge Relayer',
-    provider: '0x12a...ff01',
+    provider: '0x12a938472938472938472938472938472938ff01',
     endpoint_url: 'https://teleport.legacy-relay.net/health',
     sla_criteria: 'Must respond with proof validity and uptime guarantee >= 99.9%.',
     total_evaluations: 12,
@@ -202,7 +215,11 @@ export default function App() {
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PENALIZED' | 'COMPLIANT' | 'VIOLATED'>('ALL');
-  
+
+  // Web3 Wallet Authentication State
+  const [userWallet, setUserWallet] = useState<string | null>(null);
+  const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+
   // Registration modal
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [regId, setRegId] = useState('');
@@ -236,6 +253,67 @@ export default function App() {
     }, 4500);
   };
 
+  // MetaMask Auto-Connect & Event Listeners
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      window.ethereum
+        .request({ method: 'eth_accounts' })
+        .then((accounts) => {
+          const accs = accounts as string[];
+          if (accs && accs.length > 0) {
+            setUserWallet(accs[0]);
+          }
+        })
+        .catch(() => {});
+
+      const handleAccountsChanged = (...args: unknown[]) => {
+        const accounts = args[0] as string[];
+        if (accounts && accounts.length > 0) {
+          setUserWallet(accounts[0]);
+          addToast('info', 'Account Changed', `Active account: ${accounts[0].substring(0, 6)}...${accounts[0].substring(accounts[0].length - 4)}`);
+        } else {
+          setUserWallet(null);
+          addToast('info', 'Wallet Disconnected', 'MetaMask session disconnected.');
+        }
+      };
+
+      if (window.ethereum.on) {
+        window.ethereum.on('accountsChanged', handleAccountsChanged);
+      }
+
+      return () => {
+        if (window.ethereum?.removeListener) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        }
+      };
+    }
+  }, []);
+
+  const connectWallet = async () => {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      try {
+        setIsConnectingWallet(true);
+        const accounts = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
+        if (accounts && accounts.length > 0) {
+          setUserWallet(accounts[0]);
+          addToast('success', 'Wallet Connected', `Connected: ${accounts[0].substring(0, 6)}...${accounts[0].substring(accounts[0].length - 4)}`);
+        }
+      } catch (err: unknown) {
+        const error = err as { message?: string };
+        addToast('error', 'Connection Rejected', error?.message || 'Failed to connect MetaMask wallet.');
+      } finally {
+        setIsConnectingWallet(false);
+      }
+    } else {
+      addToast('error', 'MetaMask Missing', 'No Web3 wallet detected. Please install MetaMask to interact with the contract.');
+    }
+  };
+
+  const disconnectWallet = () => {
+    setUserWallet(null);
+    addToast('info', 'Wallet Disconnected', 'Your wallet has been disconnected from the dApp.');
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedAddress(true);
@@ -245,6 +323,13 @@ export default function App() {
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!userWallet) {
+      addToast('warning', 'Wallet Required', 'Please connect your Web3 wallet (MetaMask) before registering a service.');
+      connectWallet();
+      return;
+    }
+
     if (!regId.trim() || !regName.trim() || !regEndpoint.trim() || !regCriteria.trim()) {
       addToast('error', 'Validation Error', 'Please complete all required fields.');
       return;
@@ -269,7 +354,7 @@ export default function App() {
     const newService: ServiceSLA = {
       service_id: regId.trim().toLowerCase(),
       name: regName.trim(),
-      provider: '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('').substring(0, 10) + '...',
+      provider: userWallet.toLowerCase(),
       endpoint_url: regEndpoint.trim(),
       sla_criteria: regCriteria.trim(),
       total_evaluations: 0,
@@ -291,10 +376,16 @@ export default function App() {
     setRegCriteria('');
     setRegThreshold('3');
 
-    addToast('success', 'Service Registered', `Registered service "${newService.name}" on GenLayer Intelligent Contract.`);
+    addToast('success', 'Service Registered', `Registered service "${newService.name}" under provider ${userWallet.substring(0, 6)}...${userWallet.substring(userWallet.length - 4)}.`);
   };
 
   const startLiveEvaluation = (service: ServiceSLA) => {
+    if (!userWallet) {
+      addToast('warning', 'Wallet Required', 'Please connect your Web3 wallet (MetaMask) before triggering an on-chain AI quality audit.');
+      connectWallet();
+      return;
+    }
+
     if (!service.is_active) {
       addToast('warning', 'Service Penalized', 'Cannot evaluate an inactive or penalized service.');
       return;
@@ -304,7 +395,7 @@ export default function App() {
     setAuditStep(1);
     setAuditLogs([
       `[1/4] Initiating GenVM Web Probe on endpoint: ${service.endpoint_url}`,
-      `[gl.nondet.web.render] Dispatching secure HTTP GET request...`,
+      `[gl.nondet.web.render] Dispatching secure HTTP GET request via evaluator ${userWallet.substring(0, 6)}...${userWallet.substring(userWallet.length - 4)}`,
     ]);
     setAuditResult(null);
 
@@ -331,7 +422,7 @@ export default function App() {
     // Step 4: Finalize & write state
     setTimeout(() => {
       setAuditStep(4);
-      
+
       const isSimulatedFail = service.service_id.includes('legacy') || service.endpoint_url.includes('failure');
       const isDegraded = service.service_id.includes('sepolia');
 
@@ -353,7 +444,7 @@ export default function App() {
       setAuditLogs((prev) => [
         ...prev,
         `[4/4] Semantic consensus reached: ${verdict} (Score: ${score}/100)`,
-        `[gl.public.write] Deterministic state transition committed to GenLayer storage.`,
+        `[gl.public.write] Deterministic state transition committed to GenLayer storage by ${userWallet.substring(0, 6)}...${userWallet.substring(userWallet.length - 4)}.`,
       ]);
 
       // Update service record in memory
@@ -388,7 +479,7 @@ export default function App() {
         service_id: service.service_id,
         verdict,
         score,
-        evaluator: CONTRACT_ADDRESS.toLowerCase(),
+        evaluator: userWallet.toLowerCase(),
         summary,
         timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
       };
@@ -492,7 +583,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5 sm:space-x-3">
             {/* Studionet Status Indicator */}
             <div className="hidden md:flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 text-xs shadow-sm">
               <span className="relative flex h-2 w-2">
@@ -502,31 +593,72 @@ export default function App() {
               <span className="text-slate-300 font-medium capitalize">{NETWORK_NAME}</span>
             </div>
 
-            {/* Contract Address Copy */}
-            <button
-              onClick={() => copyToClipboard(CONTRACT_ADDRESS)}
-              className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-purple-500/40 text-xs font-mono text-slate-300 hover:text-white transition-all duration-200 hover:-translate-y-0.5"
-              title="Click to copy contract address"
-            >
+            {/* Contract Address Indicator */}
+            <div className="hidden xl:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-slate-400">
               <Cpu className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-[11px] text-slate-500">Contract:</span>
               <span>{CONTRACT_ADDRESS.substring(0, 6)}...{CONTRACT_ADDRESS.substring(CONTRACT_ADDRESS.length - 4)}</span>
-              {copiedAddress ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-            </button>
+              <button
+                onClick={() => copyToClipboard(CONTRACT_ADDRESS)}
+                title="Copy contract address"
+                className="hover:text-white transition-colors"
+              >
+                {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+              </button>
+            </div>
 
             {/* Explorer Link */}
             <a
               href={EXPLORER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-cyan-500/40 text-xs font-medium text-cyan-300 hover:text-white transition-all duration-200 hover:-translate-y-0.5"
+              className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-cyan-500/40 text-xs font-medium text-cyan-300 hover:text-white transition-all duration-200 hover:-translate-y-0.5"
             >
               <span>Explorer</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
 
+            {/* PROMINENT CONNECT WALLET BUTTON */}
+            {!userWallet ? (
+              <button
+                onClick={connectWallet}
+                disabled={isConnectingWallet}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50"
+              >
+                {isConnectingWallet ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <Wallet className="w-4 h-4 stroke-[2.5]" />
+                )}
+                <span>{isConnectingWallet ? 'Connecting...' : 'Connect Wallet'}</span>
+              </button>
+            ) : (
+              <div className="flex items-center space-x-1.5">
+                <div className="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-200 font-mono text-xs font-semibold shadow-md shadow-purple-500/15">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <Wallet className="w-3.5 h-3.5 text-purple-400" />
+                  <span>{userWallet.substring(0, 6)}...{userWallet.substring(userWallet.length - 4)}</span>
+                </div>
+                <button
+                  onClick={disconnectWallet}
+                  title="Disconnect wallet"
+                  className="p-2 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30 text-slate-400 hover:text-rose-300 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Register Service Button */}
             <button
-              onClick={() => setIsRegisterModalOpen(true)}
+              onClick={() => {
+                if (!userWallet) {
+                  addToast('warning', 'Wallet Required', 'Please connect your Web3 wallet (MetaMask) before registering a service.');
+                  connectWallet();
+                  return;
+                }
+                setIsRegisterModalOpen(true);
+              }}
               className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-400 text-white font-bold text-xs shadow-lg shadow-purple-500/25 transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -549,7 +681,7 @@ export default function App() {
                 <Sparkles className="w-3.5 h-3.5 text-purple-400" />
                 <span>AI-Powered Decentralized Quality Arbiter</span>
               </div>
-              
+
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">
                   Autonomous Quality Arbiter for{' '}
@@ -566,13 +698,23 @@ export default function App() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  onClick={() => setIsRegisterModalOpen(true)}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-400 text-white font-semibold text-xs shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center space-x-2"
-                >
-                  <span>Register New Service</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                {!userWallet ? (
+                  <button
+                    onClick={connectWallet}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold text-xs shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center space-x-2"
+                  >
+                    <Wallet className="w-4 h-4" />
+                    <span>Connect Wallet to Get Started</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsRegisterModalOpen(true)}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-400 text-white font-semibold text-xs shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center space-x-2"
+                  >
+                    <span>Register New Service</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
                 <a
                   href="#services-section"
                   className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 hover:text-white font-semibold text-xs transition-all duration-200 hover:-translate-y-0.5"
@@ -771,6 +913,14 @@ export default function App() {
                       </p>
                     </div>
 
+                    {/* Provider Info */}
+                    <div className="text-[10px] text-slate-400 flex items-center justify-between px-1">
+                      <span>Provider:</span>
+                      <span className="font-mono text-slate-300">
+                        {service.provider.substring(0, 6)}...{service.provider.substring(service.provider.length - 4)}
+                      </span>
+                    </div>
+
                     {/* Scores & Violations */}
                     <div className="grid grid-cols-2 gap-2.5 pt-1">
                       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
@@ -833,8 +983,17 @@ export default function App() {
                         onClick={() => startLiveEvaluation(service)}
                         className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600/20 via-indigo-600/20 to-cyan-600/20 hover:from-purple-600 hover:via-indigo-600 hover:to-cyan-600 border border-purple-500/30 hover:border-transparent text-purple-200 hover:text-white font-semibold text-xs shadow-md shadow-purple-500/10 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 flex items-center justify-center space-x-2 hover:-translate-y-0.5 active:scale-98"
                       >
-                        <Zap className="w-3.5 h-3.5 text-purple-400 group-hover:text-white" />
-                        <span>Trigger AI Audit (gl.evaluate_service)</span>
+                        {userWallet ? (
+                          <>
+                            <Zap className="w-3.5 h-3.5 text-purple-400 group-hover:text-white" />
+                            <span>Trigger AI Audit (gl.evaluate_service)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Wallet className="w-3.5 h-3.5 text-cyan-400 group-hover:text-white" />
+                            <span>Connect Wallet to Audit</span>
+                          </>
+                        )}
                       </button>
                     )}
                   </div>
@@ -873,7 +1032,7 @@ export default function App() {
                     <th className="py-3.5 px-4 font-semibold">Verdict</th>
                     <th className="py-3.5 px-4 font-semibold">Quality Score</th>
                     <th className="py-3.5 px-4 font-semibold">AI Arbitrator Summary</th>
-                    <th className="py-3.5 px-4 font-semibold">Evaluator Node</th>
+                    <th className="py-3.5 px-4 font-semibold">Evaluator Node / User</th>
                     <th className="py-3.5 px-4 font-semibold">Timestamp</th>
                   </tr>
                 </thead>
@@ -977,6 +1136,30 @@ export default function App() {
             </div>
 
             <form onSubmit={handleRegister} className="space-y-4 text-xs">
+              {/* Connected Wallet Banner inside Form */}
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-xs">
+                  <Wallet className="w-4 h-4 text-purple-400" />
+                  <span className="text-slate-400">Signing Account:</span>
+                  <span className="font-mono text-white font-medium">
+                    {userWallet ? `${userWallet.substring(0, 6)}...${userWallet.substring(userWallet.length - 4)}` : 'Not Connected'}
+                  </span>
+                </div>
+                {userWallet ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">
+                    Authenticated
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={connectWallet}
+                    className="text-[10px] px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-semibold transition-colors"
+                  >
+                    Connect
+                  </button>
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <label className="font-medium text-slate-300">Service Identifier (Unique Key)</label>
                 <input
@@ -1049,12 +1232,23 @@ export default function App() {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-400 text-white font-bold text-xs shadow-lg shadow-purple-500/25 transition-all hover:-translate-y-0.5 active:scale-98"
-                >
-                  Submit Registration
-                </button>
+                {userWallet ? (
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-400 text-white font-bold text-xs shadow-lg shadow-purple-500/25 transition-all hover:-translate-y-0.5 active:scale-98"
+                  >
+                    Submit Registration
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={connectWallet}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-0.5 active:scale-98 flex items-center space-x-1.5"
+                  >
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span>Connect Wallet to Register</span>
+                  </button>
+                )}
               </div>
             </form>
           </div>
